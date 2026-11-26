@@ -334,7 +334,7 @@
     <div class="avatar"><img src="./icon-192.png" alt="박현민 AI 오피스"></div>
     <div class="brand">
       <h1>박현민 AI 오피스</h1>
-      <div class="sub"><span class="dot"></span>현민님 전용 · <span id="todayText">오늘</span></div>
+      <div class="sub"><span class="dot" id="syncDot"></span>현민님 전용 · <span id="todayText">오늘</span></div>
     </div>
     <div class="server-pill" id="serverPill" role="button" tabindex="0" aria-label="AI 서버 설정">
       <span class="gear">⚙️</span>AI <span class="chip">서버</span>
@@ -372,8 +372,8 @@
     </div>
     <div class="card" style="padding:12px 14px">
       <div class="kv" style="border:0;padding:2px 0">
-        <span class="k">메시지는 이 기기에 저장됩니다</span>
-        <span class="v warn">공용 DB 미연결</span>
+        <span class="k" id="dbNote">공용 DB 연결 중…</span>
+        <span class="v warn" id="dbBadge">연결 대기</span>
       </div>
     </div>
   </section>
@@ -527,7 +527,7 @@
     <div class="card">
       <div class="card-head"><h2>📝 지시 · 아이디어</h2><span class="hint" id="memoCount">0개</span></div>
       <div class="memo-form">
-        <textarea id="memoInput" placeholder="떠오른 지시나 아이디어를 적어두세요&#10;(이 기기에 저장됩니다)"></textarea>
+        <textarea id="memoInput" placeholder="떠오른 지시나 아이디어를 적어두세요&#10;(공용 DB에 저장됩니다)"></textarea>
         <button class="send" id="memoAdd">추가</button>
       </div>
       <div class="memo-list" id="memoList"></div>
@@ -553,8 +553,8 @@
     <div class="card">
       <div class="card-head"><h2>AI 서버</h2><span class="hint">이 기기</span></div>
       <div class="kv"><span class="k">연결 방식</span><span class="v">정적 웹앱 (PWA)</span></div>
-      <div class="kv"><span class="k">데이터 저장</span><span class="v">이 브라우저 localStorage</span></div>
-      <div class="kv"><span class="k">공용 DB (Supabase)</span><span class="v warn" id="dbState">미연결</span></div>
+      <div class="kv"><span class="k">데이터 저장</span><span class="v">공용 클라우드 DB (이 기기에 캐시)</span></div>
+      <div class="kv"><span class="k">공용 DB (Supabase)</span><span class="v" id="dbState">연결 중…</span></div>
       <div class="kv"><span class="k">설치</span><span class="v">홈 화면에 추가 → 앱처럼 실행</span></div>
       <div class="btn-row">
         <button class="btn ghost" id="installHelp">설치 방법</button>
@@ -577,7 +577,7 @@
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="AI 서버 설정" aria-hidden="true">
   <div class="grab"></div>
   <h3>⚙️ AI 서버 설정</h3>
-  <p class="lead">지금은 이 기기에만 저장되는 1차 버전입니다. 아래에 Supabase 프로젝트를 넣으면 같은 오피스를 폰과 PC에서 함께 쓸 수 있게 됩니다. (실시간 동기화는 2차 버전에서 연결)</p>
+  <p class="lead">나리·달이와 같은 공용 DB(hyunmin-office)를 씁니다. 보내는 지시와 메모는 클라우드에 저장되고 폰·PC에서 실시간으로 함께 보입니다. 다른 프로젝트로 바꿀 때만 아래 주소·anon 키를 고쳐 주세요.</p>
 
   <div class="kv"><span class="k">현재 연결</span><span class="v" id="sheetDbState">로컬 저장 (이 기기)</span></div>
   <div class="kv" style="margin-bottom:12px"><span class="k">배포</span><span class="v">GitHub Pages</span></div>
@@ -585,7 +585,7 @@
   <div class="field"><label for="sbUrl">Supabase URL</label><input id="sbUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://xxxx.supabase.co"></div>
   <div class="field"><label for="sbKey">Anon key</label><input id="sbKey" type="text" autocomplete="off" placeholder="eyJhbGciOi..."></div>
   <div style="font-size:11px; color:#B29A83; font-weight:600; line-height:1.5; margin-bottom:6px">
-    키는 이 브라우저에만 저장되고 어디로도 전송되지 않습니다. 저장만 해두면 2차 버전에서 자동으로 붙습니다.
+    anon(공개) 키만 넣습니다. service_role 비밀 키는 절대 넣지 마세요.
   </div>
 
   <div class="btn-row">
@@ -599,375 +599,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
-/* =========================================================
-   박현민 AI 오피스 — 1차 프론트엔드 PWA
-   저장: localStorage. 향후 Supabase 연동은 OfficeDB 어댑터에만 붙이면 된다.
-   ========================================================= */
-(function(){
-  "use strict";
-
-  const LS = {
-    msgs: "hmo.messages.v1",
-    memos: "hmo.memos.v1",
-    cfg: "hmo.cfg.v1",
-    prefs: "hmo.prefs.v1",
-    ui: "hmo.ui.v1"
-  };
-  const $ = (s, r) => (r||document).querySelector(s);
-  const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
-
-  function load(key, fallback){
-    try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-    catch(e){ return fallback; }
-  }
-  function save(key, val){
-    try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
-    catch(e){ toast("저장 공간이 부족합니다"); return false; }
-  }
-
-  /* ---------- DB 어댑터 (2차: Supabase) ---------- */
-  const OfficeDB = {
-    mode: "local",
-    client: null,
-    async init(){
-      const cfg = load(LS.cfg, {});
-      if (cfg.supabaseUrl && cfg.supabaseKey) {
-        // 2차 버전에서 supabase-js를 붙이는 자리.
-        // this.client = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
-        this.mode = "configured";
-      } else {
-        this.mode = "local";
-      }
-      return this.mode;
-    },
-    async listMessages(room){ return load(LS.msgs, seedMessages()).filter(m => !room || m.room === room); },
-    async sendMessage(m){ const all = load(LS.msgs, seedMessages()); all.push(m); save(LS.msgs, all); return m; }
-  };
-  window.OfficeDB = OfficeDB; // 설정 화면·2차 연동용 훅
-
-  /* ---------- 봇 ---------- */
-  const BOTS = {
-    nari: { name:"나리", emoji:"🧡", face:"🧡", label:"오렌지", color:"nari" },
-    dali: { name:"달이", emoji:"💙", face:"💙", label:"블루",   color:"dali" }
-  };
-
-  function localDateKey(d){
-    d = d || new Date();
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
-  }
-  const todayKey = localDateKey();
-
-  function seedMessages(){
-    // 최초 실행 시 대회의실 기본 현황 (11.26)
-    return [
-      { id:"s1", room:"all", from:"nari", text:"대장님, 11월 26일 목요일 시작합니다 🧡 네이버 클립 27호는 어제 19:30에 배달 끝났고, 원컷 스레드 08:30도 나갔어요.", ts:"08:31", date:todayKey, seeded:1 },
-      { id:"s2", room:"all", from:"dali", text:"대장님, 달이도 대회의실 도착했습니다 💙 블로그·체험단·당근 쪽은 제가 맡을게요. 20:30 블로그 초안 미리 준비해 둘게요.", ts:"08:34", date:todayKey, seeded:1 },
-      { id:"s3", room:"all", from:"nari", text:"크몽 7종 아침 확인했어요. 1호만 판매중이고 나머지 6종은 심사 중입니다. 문의 들어오면 바로 보고드릴게요.", ts:"09:02", date:todayKey, seeded:1 },
-      { id:"s4", room:"all", from:"dali", text:"유튜브는 응?·엉? 모두 일시정지 상태 그대로예요. 재개 지시 주시면 26호부터 준비할게요.", ts:"09:08", date:todayKey, seeded:1 },
-      { id:"d1", room:"nari", from:"nari", text:"대장님, 나리 1:1입니다 🧡 클립 26호 조회가 3회로 떨어졌어요. 오늘 27호는 무TTS 유지할지, TTS 다시 넣을지 정해주세요.", ts:"09:20", date:todayKey, seeded:1 },
-      { id:"d2", room:"dali", from:"dali", text:"대장님, 달이 1:1입니다 💙 나우이지업 재발방지확약서 서명본만 받으면 판매관리 제한 풀 수 있어요.", ts:"09:24", date:todayKey, seeded:1 }
-    ];
-  }
-
-  let messages = load(LS.msgs, null);
-  if (!messages) { messages = seedMessages(); save(LS.msgs, messages); }
-
-  let currentRoom = "all";
-  let currentView = load(LS.ui, {}).view || "room";
-
-  /* ---------- 화면 전환 ---------- */
-  const TABS = { map:"map", room:"room", dash:"dash", cal:"cal", ai:"ai", memo:"memo" };
-  function setView(v, opts){
-    if (!document.getElementById("view-" + v)) v = "room";
-    currentView = v;
-    $$(".view").forEach(el => el.classList.toggle("on", el.id === "view-" + v));
-    const tabFor = TABS[v];
-    $$(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.view === tabFor)));
-    const navFor = (v === "room") ? "room" : (v === "memo" ? "memo" : (v === "bots" ? "bots" : null));
-    $$(".navbtn").forEach(b => b.setAttribute("aria-selected", String(b.dataset.nav === (navFor || ""))));
-    if (v === "cal") renderTimeline();
-    if (v === "bots") $('#dbState').textContent = OfficeDB.mode === "configured" ? "설정됨 (2차 대기)" : "미연결";
-    const ui = load(LS.ui, {}); ui.view = v; save(LS.ui, ui);
-    window.scrollTo({ top:0, behavior:"smooth" });
-    if (v === "room") scrollChat();
-  }
-  $$(".tab").forEach(t => t.addEventListener("click", () => setView(t.dataset.view)));
-  $$(".navbtn").forEach(b => b.addEventListener("click", () => setView(b.dataset.nav)));
-
-  /* ---------- 회의실 ---------- */
-  function renderRoom(){
-    const chat = $('#chat');
-    // 대회의실은 room==="all" 스레드, 1:1은 그 봇과의 스레드만
-    const shown = messages.filter(m => m.room === currentRoom);
-    chat.innerHTML = "";
-    if (!shown.length){
-      chat.innerHTML = '<div class="empty">아직 대화가 없습니다<br>아래에 한 줄 지시를 남겨보세요</div>';
-      return;
-    }
-    shown.forEach(m => {
-      const me = m.from === "user";
-      const bot = me ? null : BOTS[m.from];
-      const el = document.createElement("div");
-      el.className = "msg " + (me ? "me" : (m.from === "nari" ? "nari" : "dali"));
-      if (me){
-        el.innerHTML = '<div class="body"><div class="bubble"></div><div class="foot">' + esc(m.ts) + (m.saved ? " · 이 기기에 저장됨" : "") + '</div></div>';
-        el.querySelector(".bubble").textContent = m.text;
-      } else {
-        el.innerHTML =
-          '<div class="face">' + bot.face + '</div>' +
-          '<div class="body"><div class="who">' + bot.name +
-            '<span class="badge ' + bot.color + '">' + bot.label + '</span>' +
-            '<time>' + esc(m.ts) + '</time></div>' +
-          '<div class="bubble"></div></div>';
-        el.querySelector(".bubble").textContent = m.text;
-      }
-      chat.appendChild(el);
-    });
-    scrollChat();
-  }
-  function scrollChat(){
-    const c = $('#chat'); if (!c) return;
-    requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
-  }
-  function esc(s){
-    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-  }
-
-  $$(".subtab").forEach(t => t.addEventListener("click", () => {
-    $$(".subtab").forEach(x => x.setAttribute("aria-selected", "false"));
-    t.setAttribute("aria-selected", "true");
-    currentRoom = t.dataset.room;
-    const meta = {
-      all:  ["🏛️ 원컷 · 클립 · 스레드 · 블로그", "ON 2명"],
-      nari: ["🧡 나리 · 1:1", "나리 활동 중"],
-      dali: ["💙 달이 · 1:1", "달이 활동 중"]
-    }[currentRoom];
-    $('#roomTitle').textContent = meta[0];
-    $('#roomOn').textContent = meta[1];
-    if (currentRoom === "all"){
-      $('#msgInput').placeholder = "대장님, 지시를 한 줄로 (@all = 전원)";
-    } else {
-      $('#msgInput').placeholder = "대장님, " + BOTS[currentRoom].name + "에게 한 줄 지시";
-    }
-    renderRoom();
-  }));
-
-  function nowTime(){
-    const d = new Date();
-    return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
-  }
-
-  function sendMessage(){
-    const input = $('#msgInput');
-    const text = input.value.trim();
-    if (!text){ input.focus(); return; }
-    const msg = {
-      id: "u" + Date.now(),
-      room: currentRoom === "all" ? "all" : currentRoom,
-      from: "user",
-      text: text,
-      ts: nowTime(),
-      date: localDateKey(),
-      saved: 1
-    };
-    messages.push(msg);
-    save(LS.msgs, messages);
-    input.value = "";
-    renderRoom();
-    toast(OfficeDB.mode === "configured"
-      ? "저장됨 · 2차 버전에서 나리·달이에게 전달됩니다"
-      : "저장됨 · 지금은 이 기기에만 보관됩니다");
-  }
-  $('#sendBtn').addEventListener("click", sendMessage);
-  $('#msgInput').addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.isComposing){ e.preventDefault(); sendMessage(); }
-  });
-  $('#plusBtn').addEventListener("click", () => {
-    toast("첨부는 2차 버전에서 열립니다 · 지금은 텍스트로 지시해 주세요");
-  });
-
-  /* ---------- 캘린더 ---------- */
-  const ROUTINE = [
-    { t:"08:30", title:"원컷 스레드 (일상)", d:"반말 · 5대 규칙", who:"nari" },
-    { t:"09:00", title:"크몽 문의 확인", d:"7종 상태 · 루키광고", who:"nari" },
-    { t:"10:00", title:"콜드메일 25통", d:"평일만 · 누계 178행", who:"nari" },
-    { t:"12:00", title:"원컷 스레드 (점심)", d:"일상 톤 · 짧게", who:"nari" },
-    { t:"14:00", title:"크몽 순위 점검", d:"노출 · 키워드", who:"nari" },
-    { t:"19:30", title:"네이버 클립 1편", d:"제작 → 배달", who:"nari" },
-    { t:"20:00", title:"크몽 저녁 확인", d:"문의 · 답변", who:"nari" },
-    { t:"20:30", title:"원컷 블로그 1편", d:"원컷스튜디오 브랜드", who:"dali" },
-    { t:"21:00", title:"건기식 스레드", d:"나우코스 · 1회", who:"nari" },
-    { t:"21:30", title:"원컷 스레드 (일내용)", d:"하루 마무리", who:"nari" }
-  ];
-
-  function renderTimeline(){
-    const tl = $('#timeline'); if (!tl) return;
-    const d = new Date();
-    const nowMin = d.getHours()*60 + d.getMinutes();
-    let nextFound = false;
-    tl.innerHTML = "";
-    ROUTINE.forEach(item => {
-      const [h,m] = item.t.split(":").map(Number);
-      const mins = h*60 + m;
-      const past = mins < nowMin - 30;
-      const isNext = !past && !nextFound;
-      if (isNext) nextFound = true;
-      const el = document.createElement("div");
-      el.className = "tl-item" + (past ? " past" : "") + (isNext ? " next" : "");
-      el.innerHTML =
-        '<div class="tl-time">' + item.t + '</div>' +
-        '<div class="tl-line"></div>' +
-        '<div class="tl-body"><div class="t">' + esc(item.title) +
-          (isNext ? '<span class="now">다음</span>' : '') +
-        '</div><div class="d">' + esc(item.d) +
-          ' <span class="assignee ' + (item.who === "nari" ? "n" : "d") + '">' + BOTS[item.who].name + '</span>' +
-        '</div></div>';
-      tl.appendChild(el);
-    });
-    const dd = new Date();
-    const label = (dd.getMonth()+1) + "." + dd.getDate() + " (" + "일월화수목금토"[dd.getDay()] + ")";
-    $('#todayLabel').textContent = label;
-  }
-  $$(".day").forEach(b => b.addEventListener("click", () => {
-    $$(".day").forEach(x => x.classList.remove("now"));
-    b.classList.add("now");
-    toast(b.dataset.day === "0" ? "오늘 루틴입니다" : "지난·다음 날 루틴은 2차 버전에서 열립니다");
-    renderTimeline();
-  }));
-
-  /* ---------- 메모 ---------- */
-  let memos = load(LS.memos, []);
-  function renderMemos(){
-    const list = $('#memoList');
-    list.innerHTML = "";
-    $('#memoCount').textContent = memos.length + "개";
-    $('#memoEmpty').style.display = memos.length ? "none" : "block";
-    memos.forEach(m => {
-      const el = document.createElement("div");
-      el.className = "memo";
-      el.innerHTML = '<div class="mt"></div><button class="del" aria-label="삭제">✕</button>';
-      el.querySelector(".mt").innerHTML = '<div class="tx"></div><div class="when">' + esc(m.when) + '</div>';
-      el.querySelector(".tx").textContent = m.text;
-      el.querySelector(".del").addEventListener("click", () => {
-        if (!confirm("이 메모를 지울까요?")) return;
-        memos = memos.filter(x => x.id !== m.id);
-        save(LS.memos, memos); renderMemos(); toast("메모를 지웠습니다");
-      });
-      list.appendChild(el);
-    });
-  }
-  function addMemo(){
-    const ta = $('#memoInput');
-    const text = ta.value.trim();
-    if (!text){ ta.focus(); return; }
-    const d = new Date();
-    const when = (d.getMonth()+1) + "." + d.getDate() + " " + nowTime();
-    memos.unshift({ id:"m"+Date.now(), text:text, when:when });
-    save(LS.memos, memos);
-    ta.value = ""; renderMemos(); toast("메모를 저장했습니다");
-  }
-  $('#memoAdd').addEventListener("click", addMemo);
-  $('#memoInput').addEventListener("keydown", e => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); addMemo(); }
-  });
-
-  /* ---------- 설정 시트 ---------- */
-  const scrim = $('#scrim'), sheet = $('#sheet');
-  function openSheet(){
-    const cfg = load(LS.cfg, {});
-    $('#sbUrl').value = cfg.supabaseUrl || "";
-    $('#sbKey').value = cfg.supabaseKey || "";
-    $('#sheetDbState').textContent = (cfg.supabaseUrl && cfg.supabaseKey) ? "설정됨 (실시간은 2차)" : "로컬 저장 (이 기기)";
-    scrim.classList.add("on"); sheet.classList.add("on");
-    sheet.setAttribute("aria-hidden", "false");
-  }
-  function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); sheet.setAttribute("aria-hidden", "true"); }
-  $('#serverPill').addEventListener("click", openSheet);
-  $('#serverPill').addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") openSheet(); });
-  $('#openSettings2').addEventListener("click", openSheet);
-  $('#sheetClose').addEventListener("click", closeSheet);
-  scrim.addEventListener("click", closeSheet);
-
-  $('#saveDb').addEventListener("click", async () => {
-    const url = $('#sbUrl').value.trim(), key = $('#sbKey').value.trim();
-    if (!url && !key){ save(LS.cfg, {}); await OfficeDB.init(); closeSheet(); toast("설정을 비웠습니다 · 로컬 저장"); return; }
-    if (!/^https:\/\/.+\.supabase\.co\/?$/.test(url) && !/^https?:\/\//.test(url)){
-      toast("Supabase URL 형식을 확인해 주세요"); return;
-    }
-    save(LS.cfg, { supabaseUrl:url, supabaseKey:key, savedAt: Date.now() });
-    await OfficeDB.init();
-    closeSheet();
-    toast("저장했습니다 · 실시간 동기화는 2차 버전에서 연결됩니다");
-  });
-
-  $('#resetAll').addEventListener("click", () => {
-    if (!confirm("이 기기의 대화·메모·설정을 모두 지울까요? 되돌릴 수 없습니다.")) return;
-    Object.values(LS).forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
-    location.reload();
-  });
-
-  $('#installHelp').addEventListener("click", () => {
-    toast("크롬: ⋮ → 홈 화면에 추가 · 삼성 인터넷: ≡ → 페이지 추가 후 홈 화면");
-  });
-
-  /* ---------- 새로고침 ---------- */
-  $('#refreshBtn').addEventListener("click", async () => {
-    const btn = $('#refreshBtn');
-    btn.classList.add("spin");
-    setTimeout(() => btn.classList.remove("spin"), 620);
-    await OfficeDB.init();
-    messages = load(LS.msgs, seedMessages());
-    renderRoom(); renderMemos(); renderTimeline();
-    toast("새로고침 완료 · " + nowTime());
-  });
-
-  /* ---------- 봇 → 1:1 ---------- */
-  $$("[data-open-room]").forEach(b => b.addEventListener("click", () => {
-    const r = b.dataset.openRoom;
-    setView("room");
-    const target = $$(".subtab").find(t => t.dataset.room === r);
-    if (target) target.click();
-  }));
-
-  /* ---------- 설정 저장 토글 ---------- */
-  const prefs = load(LS.prefs, { night:true, digest:false, lite:true });
-  $$(".toggle").forEach(t => {
-    const k = t.dataset.pref;
-    t.setAttribute("aria-checked", String(!!prefs[k]));
-    t.addEventListener("click", () => {
-      prefs[k] = !prefs[k];
-      t.setAttribute("aria-checked", String(prefs[k]));
-      save(LS.prefs, prefs);
-    });
-  });
-
-  /* ---------- 토스트 ---------- */
-  let toastTimer;
-  function toast(msg){
-    const el = $('#toast'); if (!el) return;
-    el.textContent = msg; el.classList.add("on");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("on"), 2400);
-  }
-  window.hmoToast = toast;
-
-  /* ---------- 부팅 ---------- */
-  (async function boot(){
-    const d0 = new Date();
-    const todayText = (d0.getMonth()+1) + "월 " + d0.getDate() + "일 " + "일월화수목금토"[d0.getDay()] + "요일";
-    const tt = $('#todayText'); if (tt) tt.textContent = todayText;
-    await OfficeDB.init();
-    renderRoom(); renderMemos(); renderTimeline();
-    // 저장된 뷰 복원 (기본: 회의실)
-    setView(currentView || "room");
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(()=>{});
-      });
-    }
-  })();
-})();
-</script>
+<script src="./app.js"></script>
 </body>
 </html>

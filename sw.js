@@ -1,8 +1,9 @@
 /* 박현민 AI 오피스 — service worker */
-const VERSION = "hmo-v1";
+const VERSION = "hmo-v2";
 const ASSETS = [
   "./",
   "./index.html",
+  "./app.js",
   "./manifest.json",
   "./icon.svg",
   "./icon-192.png",
@@ -28,8 +29,15 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
 
-  // 문서는 네트워크 우선(업데이트 반영), 실패하면 캐시
-  if (req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html")) {
+  // Supabase API·CDN 요청은 건드리지 않는다
+  const url = req.url || "";
+  if (url.indexOf("supabase.co") !== -1 || req.destination === "document" && url.indexOf(location.origin) !== 0) return;
+
+  // 문서·스크립트는 네트워크 우선(업데이트 반영), 실패하면 캐시
+  const isCode = req.mode === "navigate"
+    || (req.headers.get("accept") || "").includes("text/html")
+    || req.destination === "script";
+  if (isCode) {
     e.respondWith(
       fetch(req)
         .then((res) => {
