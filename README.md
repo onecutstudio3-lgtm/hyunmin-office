@@ -1,7 +1,7 @@
 # 박현민 AI 오피스
 
-현민님 전용 모바일 PWA. 나리·달이와 한 화면에서 지시하고 현황을 보는 오피스입니다.
-2차 버전부터 **Supabase 공용 DB(hyunmin-office)** 에 대화·메모가 저장되고, 폰·PC·나리·달이가 같은 방을 실시간으로 봅니다.
+현민님 전용 모바일 PWA. 나리·달이·제이·주노 네 명과 한 화면에서 지시하고 현황을 보는 오피스입니다.
+2차 버전부터 **Supabase 공용 DB(hyunmin-office)** 에 대화·메모가 저장되고, 폰·PC·나리·달이·제이·주노가 같은 방을 실시간으로 봅니다.
 
 - 주소: https://onecutstudio3-lgtm.github.io/hyunmin-office/
 - 공용 DB: https://xwylmxghvlvhgizrjhqm.supabase.co (organization `OneCutStudio` / Free, 리전 ap-northeast-2 서울)
@@ -16,8 +16,11 @@
 ## 지금 되는 것
 
 - 맵 / 회의실 / 대시보드 / 캘린더 / AI한도 / 메모 6개 탭
-- 회의실: 대회의실 · 나리 1:1 · 달이 1:1, 지시 보내기 → Supabase `messages` 에 저장 + 실시간 반영
+- 회의실: 대회의실 + 1:1 네 개(나리 · 달이 · 제이 · 주노). 지시 보내기 → Supabase `messages` 에 저장 + 실시간 반영
+- 말풍선마다 **[복사]** — 한 번 눌러 본문을 클립보드로(1.5초 “복사됨 ✓”)
+- **[진행 현황]** 패널 — `memos` 의 글을 진행중/완료로 나눠 요약(접이식). `[완료]` 접두어로 완료 표시
 - 메모: Supabase `memos` 에 저장, 공용 DB에서도 삭제
+- 폰 화면 복귀(visibilitychange · focus · pageshow) 시 최신 글·메모를 바로 다시 불러오고 Realtime 구독도 점검·복구
 - 하단 상태바: **공용 DB 연결됨 · 실시간 동기화** (Realtime 실패 시 5초 폴링으로 자동 전환)
 - 오프라인 실행(서비스 워커 캐시) + 연결이 끊기면 이 기기에 보관했다가 다시 올림
 - 설정(⚙️ AI 서버) 시트에서 다른 Supabase 프로젝트로 바꿀 수 있음 (anon 공개 키만)

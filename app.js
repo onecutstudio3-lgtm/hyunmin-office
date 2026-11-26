@@ -34,25 +34,30 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
-  /* ---------- 봇 ---------- */
+  /* ---------- 봇 (4명 체제: 나리 · 달이 · 제이 · 주노) ---------- */
   const BOTS = {
-    nari:    { name:"나리",   emoji:"🧡", face:"🧡", label:"오렌지",  color:"nari",   what:"원컷스튜디오 · 클립 · 스레드 · 크몽" },
-    dali:    { name:"달이",   emoji:"💙", face:"💙", label:"블루",    color:"dali",   what:"블로그 · 당근 · 스마트스토어 · 체험단" },
-    hyemin:  { name:"혜민",   emoji:"🌸", face:"🌸", label:"핑크",    color:"pink",   what:"1:1 대화 · 지시·보고" },
-    muse:    { name:"뮤즈",   emoji:"🪄", face:"🪄", label:"바이올렛", color:"violet", what:"1:1 대화 · 지시·보고" },
-    keyring: { name:"키링",   emoji:"🔑", face:"🔑", label:"Keyring", color:"gold",   what:"지시 기록 · 보고 정리" },
-    hark:    { name:"호크",   emoji:"🦅", face:"🦅", label:"Hark",    color:"dali",   what:"대회의실 · 연결 대기" },
-    claude:  { name:"클로드", emoji:"🤖", face:"🤖", label:"Claude",  color:"nari",   what:"대회의실 · 연결 대기" }
+    nari:    { name:"나리", emoji:"🧡", face:"🧡", label:"오렌지", color:"nari",   what:"원컷스튜디오 · 클립 · 스레드 · 크몽" },
+    dali:    { name:"달이", emoji:"💙", face:"💙", label:"블루",   color:"dali",   what:"블로그 · 당근 · 스마트스토어 · 체험단" },
+    keyring: { name:"제이", emoji:"🔑", face:"🔑", label:"골드",   color:"gold",   what:"지시 기록 · 보고 정리" },
+    juno:    { name:"주노", emoji:"🟣", face:"🟣", label:"퍼플",   color:"violet", what:"오피스 · 코드 · 배포" }
   };
 
-  /* ---------- 방 (대회의실 + 1:1) ---------- */
+  /* 예전 멤버(혜민·뮤즈·호크·클로드)가 남긴 옛 글은 이름만 살려 읽기 전용으로 그린다.
+     탭·맵 데스크·봇 목록에는 넣지 않는다. */
+  const LEGACY = {
+    hyemin: { name:"혜민",   emoji:"🌸", face:"🌸", label:"핑크",    color:"pink",   what:"" },
+    muse:   { name:"뮤즈",   emoji:"🪄", face:"🪄", label:"바이올렛", color:"violet", what:"" },
+    hark:   { name:"호크",   emoji:"🦅", face:"🦅", label:"Hark",    color:"dali",   what:"" },
+    claude: { name:"클로드", emoji:"🤖", face:"🤖", label:"Claude",  color:"nari",   what:"" }
+  };
+
+  /* ---------- 방 (대회의실 + 1:1 네 개) ---------- */
   const ROOMS = [
-    { id:"all",     emoji:"🏛️", title:"🏛️ 원컷 · 클립 · 스레드 · 블로그", nowTitle:"대회의실",   now:"원컷 · 클립 · 스레드 · 블로그 한 번에 지시", tone:"" },
-    { id:"nari",    emoji:"🧡", title:"🧡 나리 · 1:1",   nowTitle:"나리 지휘실", now:"클립 27호 배달 · 스레드 3회 진행 중", tone:"n" },
-    { id:"dali",    emoji:"💙", title:"💙 달이 · 1:1",   nowTitle:"달이 라운지", now:"블로그 · 당근 · 스마트스토어 주문 처리", tone:"d" },
-    { id:"hyemin",  emoji:"🌸", title:"🌸 혜민 · 1:1",   nowTitle:"혜민 데스크", now:"1:1 방 · 지시와 보고", tone:"p" },
-    { id:"muse",    emoji:"🪄", title:"🪄 뮤즈 · 1:1",   nowTitle:"뮤즈 데스크", now:"1:1 방 · 지시와 보고", tone:"v" },
-    { id:"keyring", emoji:"🔑", title:"🔑 키링 · 1:1",   nowTitle:"키링 데스크", now:"지시 기록 · 보고 정리", tone:"g" }
+    { id:"all",     emoji:"🏛️", title:"🏛️ 대회의실 · 전원", nowTitle:"대회의실",   now:"원컷 · 클립 · 스레드 · 블로그 한 번에 지시", tone:"" },
+    { id:"nari",    emoji:"🧡", title:"🧡 나리 · 1:1",   nowTitle:"나리 지휘실", now:"클립 · 스레드 · 크몽 · 콜드메일", tone:"n" },
+    { id:"dali",    emoji:"💙", title:"💙 달이 · 1:1",   nowTitle:"달이 라운지", now:"블로그 · 당근 · 스마트스토어 · 체험단", tone:"d" },
+    { id:"keyring", emoji:"🔑", title:"🔑 제이 · 1:1",   nowTitle:"제이 데스크", now:"지시 기록 · 보고 정리", tone:"g" },
+    { id:"juno",    emoji:"🟣", title:"🟣 주노 · 1:1",   nowTitle:"주노 데스크", now:"오피스 · 코드 · 배포", tone:"v" }
   ];
 
   function localDateKey(d){
@@ -122,11 +127,15 @@
       const d = await r.json();
       return Array.isArray(d) ? d[0] : d;
     },
-    async insertMemo(text){
+    /* 완료 표시는 UPDATE 권한이 없어서(anon은 select·insert·delete만) 같은 내용을 새 행으로 넣고 옛 행을 지운다.
+       created_at을 그대로 넘겨 시간 순서는 유지한다. */
+    async insertMemo(text, createdAt){
+      const payload = { text:text };
+      if (createdAt) payload.created_at = createdAt;
       const r = await fetch(this.base() + "/memos", {
         method:"POST",
         headers:this.headers({ "Content-Type":"application/json", "Prefer":"return=representation" }),
-        body: JSON.stringify({ text:text })
+        body: JSON.stringify(payload)
       });
       if (!r.ok) throw new Error("HTTP " + r.status);
       const d = await r.json();
@@ -233,10 +242,15 @@
   }
 
   /* ---------- 동기화 ---------- */
+  let refreshing = false;
   async function refreshAll(quiet){
+    if (refreshing) return false;          // 화면 복귀·폴링이 겹쳐도 요청은 한 번만
+    refreshing = true;
     try{
       const [ms, mm] = await Promise.all([ OfficeDB.selectMessages(), OfficeDB.selectMemos() ]);
-      messages = ms || [];
+      const pendingLocal = messages.filter(m => String(m.id || "").indexOf("local-") === 0);
+      messages = (ms || []).concat(pendingLocal);
+      messages.sort((a,b) => String(a.created_at||"").localeCompare(String(b.created_at||"")));
       memos = mm || [];
       resetSeen();
       messages.forEach(m => m.id && seenMsg.add(m.id));
@@ -251,10 +265,13 @@
       if (OfficeDB.mode !== "realtime") OfficeDB.mode = "local";
       renderStatus();
       return false;
+    } finally {
+      refreshing = false;
     }
   }
 
   async function pollTick(){
+    if (document.hidden) return;           // 화면이 꺼져 있는 동안에는 요청하지 않는다(복귀하면 바로 따라잡음)
     try{
       const ms = await OfficeDB.selectMessages();
       let changed = false;
@@ -295,6 +312,52 @@
     }
     save(LS.queue, left);
   }
+
+  /* ---------- Realtime 구독 점검·복구 ---------- */
+  let rtBusy = false;
+  function onRealtimeRow(tbl, evt, row){
+    if (tbl === "messages"){
+      if (evt === "insert") upsertMessage(row);
+      if (evt === "delete") removeMessage(row && row.id);
+    } else {
+      if (evt === "insert") upsertMemo(row);
+      if (evt === "delete") removeMemo(row && row.id);
+    }
+  }
+  async function ensureRealtime(){
+    if (rtBusy) return false;
+    if (OfficeDB.channel && (OfficeDB.channel.state === "joined" || OfficeDB.channel.state === "joining")) return true;
+    rtBusy = true;
+    try{
+      if (OfficeDB.channel){
+        try{ OfficeDB.client && OfficeDB.client.removeChannel(OfficeDB.channel); }catch(e){}
+        OfficeDB.channel = null;
+      }
+      const ok = await OfficeDB.connectRealtime(onRealtimeRow);
+      if (ok) OfficeDB.mode = "realtime";
+      else if (OfficeDB.mode === "realtime") OfficeDB.mode = "poll";
+      renderStatus();
+      return ok;
+    } finally {
+      rtBusy = false;
+    }
+  }
+
+  /* ---------- 폰 화면 복귀 즉시 동기화 (visibilitychange · focus · pageshow · online) ---------- */
+  let resumeTimer = null;
+  function resumeSync(why){
+    if (document.hidden) return;
+    clearTimeout(resumeTimer);                 // 짧은 디바운스로 중복 요청 방지
+    resumeTimer = setTimeout(async () => {
+      await refreshAll(true);
+      flushQueue();
+      ensureRealtime();                        // 구독이 끊겼으면 다시 붙인다
+    }, 220);
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeSync("visible"); });
+  window.addEventListener("focus", () => resumeSync("focus"));
+  window.addEventListener("pageshow", e => { if (e.persisted) resumeSync("pageshow"); });
+  window.addEventListener("online", () => resumeSync("online"));
 
   /* ---------- 화면 전환 ---------- */
   const TABS = { map:"map", room:"room", dash:"dash", cal:"cal", ai:"ai", memo:"memo" };
@@ -337,10 +400,13 @@
   }
 
   /* ---------- 회의실 ---------- */
+  function botMeta(kind){
+    return BOTS[kind] || LEGACY[kind] || { name:String(kind || "AI"), emoji:"🤖", face:"🤖", label:"AI", color:"dali", what:"" };
+  }
   function msgKind(m){
     if (!m) return "system";
     if (m.sender === "user") return "user";
-    if (BOTS[m.sender]) return m.sender;   // nari·dali·hyemin·muse·keyring·hark·claude
+    if (BOTS[m.sender] || LEGACY[m.sender]) return m.sender;   // nari·dali·keyring·juno
     return "system";
   }
   function renderRoom(){
@@ -362,18 +428,20 @@
         return;
       }
       const me = kind === "user";
-      const bot = me ? null : (BOTS[kind] || { name: esc(kind), emoji:"🤖", face:"🤖", label:"AI", color:"dali" });
+      const bot = me ? null : botMeta(kind);
       const el = document.createElement("div");
       el.className = "msg " + (me ? "me" : kind);
+      el.dataset.id = m.id || "";
+      const cp = '<button class="copy" type="button" data-copy="' + esc(m.id) + '" aria-label="본문 복사">복사</button>';
       if (me){
-        el.innerHTML = '<div class="body"><div class="bubble"></div><div class="foot">' + esc(hhmm(m.created_at)) + '</div></div>';
+        el.innerHTML = '<div class="body"><div class="bubble"></div><div class="foot"><span>' + esc(hhmm(m.created_at)) + '</span>' + cp + '</div></div>';
         el.querySelector(".bubble").textContent = m.text;
       } else {
         el.innerHTML =
           '<div class="face">' + bot.face + '</div>' +
           '<div class="body"><div class="who">' + bot.name +
             '<span class="badge ' + bot.color + '">' + bot.label + '</span>' +
-            '<time>' + esc(hhmm(m.created_at)) + '</time></div>' +
+            '<time>' + esc(hhmm(m.created_at)) + '</time>' + cp + '</div>' +
           '<div class="bubble"></div></div>';
         el.querySelector(".bubble").textContent = m.text;
       }
@@ -517,22 +585,35 @@
     renderTimeline();
   }));
 
-  /* ---------- 메모 ---------- */
+  /* ---------- 메모 · 진행 현황 ---------- */
+  function parseMemo(text){
+    const raw = String(text == null ? "" : text);
+    const hit = raw.match(/^\s*\[\s*(완료|완료됨|done)\s*\]\s*/i);
+    if (!hit) return { done:false, body:raw.trim() };
+    return { done:true, body:raw.slice(hit[0].length).trim() };
+  }
+  function whenLabel(iso){
+    const d = new Date(iso || Date.now());
+    if (isNaN(d.getTime())) return "";
+    return (d.getMonth()+1) + "." + d.getDate() + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  }
+
   function renderMemos(){
     const list = $("#memoList"); if (!list) return;
     list.innerHTML = "";
     const count = $("#memoCount"); if (count) count.textContent = memos.length + "개";
     const empty = $("#memoEmpty"); if (empty) empty.style.display = memos.length ? "none" : "block";
     memos.forEach(m => {
+      const p = parseMemo(m.text);
       const el = document.createElement("div");
-      el.className = "memo";
-      el.innerHTML = '<div class="mt"></div><button class="del" aria-label="삭제">✕</button>';
-      const when = (() => {
-        const d = new Date(m.created_at || Date.now());
-        return (d.getMonth()+1) + "." + d.getDate() + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
-      })();
-      el.querySelector(".mt").innerHTML = '<div class="tx"></div><div class="when">' + esc(when) + '</div>';
-      el.querySelector(".tx").textContent = m.text;
+      el.className = "memo" + (p.done ? " done" : "");
+      el.innerHTML = '<div class="mt"></div>' +
+        '<div class="acts">' +
+          '<button class="chk' + (p.done ? " on" : "") + '" data-memo-done="' + esc(m.id) + '" data-memo-state="' + (p.done ? "0" : "1") + '" aria-label="' + (p.done ? "완료 취소" : "완료 표시") + '">' + (p.done ? "✓" : "○") + '</button>' +
+          '<button class="del" aria-label="삭제">✕</button>' +
+        '</div>';
+      el.querySelector(".mt").innerHTML = '<div class="tx"></div><div class="when">' + esc(whenLabel(m.created_at)) + (p.done ? ' <b class="dtag">완료</b>' : '') + '</div>';
+      el.querySelector(".tx").textContent = p.body;
       el.querySelector(".del").addEventListener("click", async () => {
         if (!confirm("이 메모를 지울까요? 공용 DB에서도 지워집니다.")) return;
         try{
@@ -543,7 +624,134 @@
       });
       list.appendChild(el);
     });
+    renderProgress();
   }
+
+  /* 완료 표시: UPDATE 권한이 없어서 같은 글을 새 행으로 넣고 옛 행을 지운다(created_at 유지) */
+  async function setMemoDone(id, done){
+    const m = memos.find(x => String(x.id) === String(id));
+    if (!m) return;
+    const body = parseMemo(m.text).body;
+    const nextText = done ? "[완료] " + body : body;
+    if (String(id).indexOf("local-") === 0){
+      m.text = nextText; renderMemos(); cacheAll(); return;
+    }
+    try{
+      const saved = await OfficeDB.insertMemo(nextText, m.created_at);
+      if (!saved || !saved.id){ toast("바꾸지 못했습니다 · 다시 시도해 주세요"); return; }
+      try{ await OfficeDB.deleteMemo(m.id); }catch(e){}
+      removeMemo(m.id);
+      upsertMemo(saved);
+      toast(done ? "완료로 옮겼습니다 · " + whenLabel(saved.created_at) : "다시 진행중으로 옮겼습니다");
+    }catch(e){
+      toast("바꾸지 못했습니다 · " + (e.message || "오류"));
+    }
+  }
+
+  function progressData(){
+    const rows = memos.map(m => {
+      const p = parseMemo(m.text);
+      return { id:m.id, body:p.body, done:p.done, created_at:m.created_at };
+    });
+    return {
+      run: rows.filter(x => !x.done && x.body),
+      done: rows.filter(x => x.done && x.body)
+    };
+  }
+
+  function renderProgress(){
+    if (!$("#progCard")) return;
+    const data = progressData();
+    const run = data.run, done = data.done;
+    const set = (sel, v) => { const el = $(sel); if (el) el.textContent = String(v); };
+    set("#progRun", run.length);
+    set("#progDone", done.length);
+
+    const peek = $("#progPeek");
+    if (peek){
+      peek.style.display = "block";
+      if (run.length) peek.textContent = "최근 · " + run[0].body;
+      else if (done.length) peek.textContent = "진행중 0건 · 완료 " + done.length + "건";
+      else peek.textContent = "메모에 지시를 적으면 여기에서 진행중/완료로 나뉘어 보입니다";
+    }
+
+    const runList = $("#progRunList"), doneList = $("#progDoneList");
+    const empty = $("#progEmpty");
+    if (runList) runList.innerHTML = "";
+    if (doneList) doneList.innerHTML = "";
+    if (empty) empty.style.display = (run.length + done.length) ? "none" : "block";
+
+    const addItem = (host, it) => {
+      if (!host) return;
+      const el = document.createElement("div");
+      el.className = "prog-item" + (it.done ? " done" : "");
+      const chk = document.createElement("button");
+      chk.type = "button";
+      chk.className = "pchk" + (it.done ? " on" : "");
+      chk.dataset.memoDone = String(it.id);
+      chk.dataset.memoState = it.done ? "0" : "1";
+      chk.setAttribute("aria-label", it.done ? "완료 취소" : "완료 표시");
+      chk.textContent = it.done ? "✓" : "○";
+      const tx = document.createElement("div"); tx.className = "ptx"; tx.textContent = it.body;
+      const w = document.createElement("div"); w.className = "pwhen"; w.textContent = whenLabel(it.created_at);
+      el.appendChild(chk); el.appendChild(tx); el.appendChild(w);
+      host.appendChild(el);
+    };
+    run.slice(0, 8).forEach(it => addItem(runList, it));
+    done.slice(0, 8).forEach(it => addItem(doneList, it));
+    const more = $("#progMore");
+    if (more) more.textContent = (run.length + done.length > 16) ? "… 메모 탭에서 전체 " + (run.length + done.length) + "건 보기" : "";
+  }
+
+  const progToggle = $("#progToggle"), progBody = $("#progBody");
+  function setProgOpen(open){
+    if (!progBody || !progToggle) return;
+    progBody.hidden = !open;
+    progToggle.setAttribute("aria-expanded", String(!!open));
+    const ui = load(LS.ui, {}); ui.progOpen = !!open; save(LS.ui, ui);
+  }
+  if (progToggle) progToggle.addEventListener("click", () => setProgOpen(progBody.hidden));
+
+  /* 메모 완료 토글(메모 탭 · 진행 현황 패널 공통) */
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("[data-memo-done]") : null;
+    if (!b) return;
+    setMemoDone(b.dataset.memoDone, b.dataset.memoState === "1");
+  });
+
+  /* ---------- 말풍선 [복사] ---------- */
+  async function copyText(text){
+    const t = String(text == null ? "" : text);
+    try{
+      if (navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(t); return true; }
+    }catch(e){}
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = t; ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.top = "-1000px"; ta.style.left = "0"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, t.length);
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
+  }
+  document.addEventListener("click", async e => {
+    const btn = e.target && e.target.closest ? e.target.closest("[data-copy]") : null;
+    if (!btn) return;
+    const m = messages.find(x => String(x.id) === String(btn.dataset.copy));
+    if (!m){ toast("복사할 글을 찾지 못했습니다"); return; }
+    const ok = await copyText(m.text);
+    if (!ok){ toast("복사하지 못했습니다 · 길게 눌러 선택해 주세요"); return; }
+    const label = btn.dataset.label || btn.textContent;
+    btn.dataset.label = label;
+    btn.textContent = "복사됨 ✓";
+    btn.classList.add("done");
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = label; btn.classList.remove("done"); }, 1500);
+    try{ if (navigator.vibrate) navigator.vibrate(8); }catch(err){}
+  });
+
   async function addMemo(){
     const ta = $("#memoInput");
     const text = ta.value.trim();
@@ -752,6 +960,7 @@
     renderBots(); renderNow();
     renderRoom(); renderMemos(); renderTimeline(); renderStatus();
     tickClock(); applyMovePref();
+    setProgOpen(!!load(LS.ui, {}).progOpen);
     // 맵 개편 첫 실행에는 본부 오피스를 먼저 보여준다 (한 번만)
     const ui0 = load(LS.ui, {});
     if (!ui0.mapIntro){ ui0.mapIntro = true; ui0.view = "map"; save(LS.ui, ui0); currentView = "map"; }
@@ -762,16 +971,8 @@
     await refreshAll(true);
 
     // Realtime 먼저 시도, 실패하면 5초 폴링
-    const rt = await OfficeDB.connectRealtime((tbl, evt, row) => {
-      if (tbl === "messages"){
-        if (evt === "insert") upsertMessage(row);
-        if (evt === "delete") removeMessage(row && row.id);
-      } else {
-        if (evt === "insert") upsertMemo(row);
-        if (evt === "delete") removeMemo(row && row.id);
-      }
-    });
-    if (!rt) OfficeDB.mode = (OfficeDB.mode === "local") ? "local" : "poll";
+    const rt = await ensureRealtime();
+    if (!rt && OfficeDB.mode === "realtime") OfficeDB.mode = "poll";
     renderStatus();
     startPolling();          // 실시간이 붙어도 30초 안전망 + 미전송분 재시도
     flushQueue();
