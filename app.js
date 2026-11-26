@@ -643,20 +643,38 @@
 
   function aiErr(code, msg){ const e = new Error(msg || code); e.code = code; return e; }
 
-  /* Gemini REST 호출: 2.5-flash(빠른 모드) → 2.5-flash → 2.0-flash 순서로 폴백 */
+  /* 사용 가능한 Gemini flash 모델 자동 탐색 (404 방지) */
+  async function discoverGeminiModel(key){
+    const res = await fetchWithTimeout(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=50",
+      { method:"GET", headers:{ "x-goog-api-key": key } },
+      20000
+    );
+    const data = await res.json().catch(() => null);
+    if (!res.ok) return null;
+    const list = (data && data.models) || [];
+    const usable = list
+      .filter(m => m && m.name && Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
+      .map(m => String(m.name).replace(/^models\//, ""));
+    return usable.find(n => /gemini-2\.5-flash$/i.test(n))
+      || usable.find(n => /gemini.*flash/i.test(n))
+      || usable.find(n => /gemini/i.test(n))
+      || usable[0] || null;
+  }
+
+  /* Gemini REST 호출: x-goog-api-key 헤더 사용 (AIza·AQ. 모두 지원) + 404 시 모델 자동 탐색 */
   async function callGemini(body){
     const key = aiKey();
     if (!key) throw aiErr("NO_KEY", "Gemini 키 없음");
     const attempts = [
       { model:"gemini-2.5-flash", thinkBudget:0 },
       { model:"gemini-2.5-flash", thinkBudget:null },
-      { model:"gemini-2.5-flash-lite", thinkBudget:null },
       { model:"gemini-2.0-flash", thinkBudget:null },
-      { model:"gemini-2.0-flash-lite", thinkBudget:null },
-      { model:"gemini-1.5-flash", thinkBudget:null }
+      { model:"gemini-2.5-flash-lite", thinkBudget:null }
     ];
     let last = null;
     let dropSchema = false;
+    let discoveredTried = false;
     for (let i = 0; i < attempts.length; i++){
       const a = attempts[i];
       const payload = JSON.parse(JSON.stringify(body));
@@ -678,7 +696,7 @@
           e.reason = reasons[0] || er.status || "";
           if (res.status === 400 && /API_KEY/i.test(String(e.reason) + " " + String(e.message))) e.fatal = true;
           if (res.status === 401 || res.status === 403) e.fatal = true;
-          if (res.status === 400 && gc.responseSchema) dropSchema = true;   // 스키마 미지원이면 형식만 빼고 재시도
+          if (res.status === 400 && gc.responseSchema) dropSchema = true;
           throw e;
         }
         const cand = (data && data.candidates && data.candidates[0]) || null;
@@ -694,6 +712,13 @@
       }catch(e){
         last = e;
         if (e && e.fatal) throw e;
+        if (i === attempts.length - 1 && !discoveredTried && e && e.status === 404){
+          discoveredTried = true;
+          const found = await discoverGeminiModel(key).catch(() => null);
+          if (found && !attempts.some(x => x.model === found)){
+            attempts.push({ model: found, thinkBudget: null });
+          }
+        }
       }
     }
     throw last || new Error("Gemini 호출 실패");
@@ -706,9 +731,9 @@
     if (e && e.code === "NO_KEY") return "Gemini 키가 없습니다 · ⚙️ AI에서 키를 먼저 저장해 주세요.";
     if (e && e.code === "FORMAT") return "답변 형식을 읽지 못했습니다 · 한 번 더 보내 주세요.";
     if (s === 400 && /API_KEY/i.test(r)) return "Gemini 키가 올바르지 않습니다 · ⚙️ AI에서 키를 다시 확인해 주세요.";
-    if (s === 401 || s === 403) return "이 키로는 Gemini를 쓸 수 없습니다 · Google AI Studio에서 키 상태를 확인해 주세요.";
+    if (s === 401 || s === 403) return "키 인증 실패(" + s + "): " + m.slice(0, 80);
     if (s === 429) return "Gemini 무료 한도를 넘었습니다 · 잠시 뒤 다시 보내거나 5분 서버 답변을 기다려 주세요.";
-    if (s === 404) return "Gemini 모델을 찾지 못했습니다 · 조금 뒤 다시 시도해 주세요.";
+    if (s === 404) return "Gemini 모델 없음(404): " + m.slice(0, 80);
     if (s >= 500) return "Gemini 서버가 잠시 불안정합니다 · 조금 뒤 다시 시도해 주세요.";
     if (/abort|timeout/i.test(m)) return "응답이 너무 늦습니다(60초) · 다시 보내 주세요.";
     if (/Failed to fetch|NetworkError|Load failed|ERR_/i.test(m)) return "구글에 연결하지 못했습니다 · 인터넷 연결을 확인해 주세요.";
