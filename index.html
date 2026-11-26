@@ -907,7 +907,9 @@
     location.reload();
   });
 
-  $('#installHelp').addEventListener("click", openSheet);
+  $('#installHelp').addEventListener("click", () => {
+    toast("크롬: ⋮ → 홈 화면에 추가 · 삼성 인터넷: ≡ → 페이지 추가 후 홈 화면");
+  });
 
   /* ---------- 새로고침 ---------- */
   $('#refreshBtn').addEventListener("click", async () => {
