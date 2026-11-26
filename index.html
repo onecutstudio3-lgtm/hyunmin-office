@@ -204,7 +204,7 @@
   .tl{position:relative; padding-left:0;}
   .tl-item{display:flex; gap:10px; padding-bottom:14px; position:relative;}
   .tl-time{width:46px; flex:none; font-size:12px; font-weight:800; color:#8B7360; padding-top:9px; letter-spacing:-.02em;}
-  .tl-line{width:2px; flex:none; background:#F0E5D6; position:relative; margin:4px 0;}
+  .tl-line{width:2px; flex:none; background:#E9D8C4; position:relative; margin:4px 0;}
   .tl-line::before{content:""; position:absolute; left:50%; top:2px; transform:translateX(-50%); width:9px; height:9px; border-radius:50%; background:#E3D2BD; border:2px solid #fff;}
   .tl-item.next .tl-line::before{background:var(--brown); box-shadow:0 0 0 4px #F3E6D7;}
   .tl-item.past{opacity:.55;}
@@ -319,6 +319,10 @@
   @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
   @media (max-width:360px){
     .brand h1{font-size:17px;} .tab{font-size:12.5px;} .send{padding:9px 13px;}
+  }
+  @media (min-width:520px){
+    .sheet{left:50%; right:auto; width:460px; transform:translate(-50%,102%); border-radius:26px 26px 0 0;}
+    .sheet.on{transform:translate(-50%,0);}
   }
 </style>
 </head>
@@ -447,7 +451,7 @@
       <div class="rows">
         <div class="row"><div class="ico">📱</div><div><div class="t">네이버 클립</div><div class="d">19:30 1편 · 27호 배달 완료</div></div><div class="r">가동</div></div>
         <div class="row"><div class="ico">🌿</div><div><div class="t">건기식 스레드</div><div class="d">21:00 1회 · 31호까지</div></div><div class="r">가동</div></div>
-        <div class="row"><div class="ico">▶️</div><div><div class="t">유튜브 전 채널</div><div class="d">응? · 엉? 일시정지</div></div><div class="r off">중지</div></div>
+        <div class="row"><div class="ico">▶️</div><div><div class="t">유튜브 전 채널</div><div class="d">응?·엉?·미국·Huh? 일시정지</div></div><div class="r off">중지</div></div>
       </div>
     </div>
 
@@ -484,14 +488,14 @@
     <div class="card">
       <div class="card-head"><h2>⚡ 오늘 가동 현황</h2><span class="hint">자동 스케줄</span></div>
       <div class="gauge">
-        <div class="lab"><span>가동 중인 스케줄</span><span>8 / 11</span></div>
+        <div class="lab"><span>가동 중인 스케줄</span><span>10 / 14</span></div>
         <div class="bar"><i></i></div>
-        <div style="font-size:11px; color:#A08A75; font-weight:600; margin-top:8px">유튜브 3채널은 일시정지로 빼두었습니다</div>
+        <div style="font-size:11px; color:#A08A75; font-weight:600; margin-top:8px">유튜브 4채널은 일시정지로 빼두었습니다</div>
       </div>
       <div class="rows" style="margin-top:12px">
         <div class="row"><div class="ico">✅</div><div><div class="t">클립 · 스레드 · 블로그</div><div class="d">19:30 / 08:30·12:00·21:00·21:30 / 20:30</div></div><div class="r">가동</div></div>
         <div class="row"><div class="ico">✅</div><div><div class="t">확인 · 감시</div><div class="d">크몽 09·20시 · 콜드메일 10시 · 메일 30분</div></div><div class="r">가동</div></div>
-        <div class="row"><div class="ico">⏸️</div><div><div class="t">유튜브 응? · 엉?</div><div class="d">재개는 대장님 지시 대기</div></div><div class="r off">정지</div></div>
+        <div class="row"><div class="ico">⏸️</div><div><div class="t">유튜브 4채널</div><div class="d">응?·엉?·미국·Huh? · 재개는 대장님 지시 대기</div></div><div class="r off">정지</div></div>
       </div>
     </div>
 
