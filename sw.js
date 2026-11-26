@@ -1,5 +1,5 @@
 /* 박현민 AI 오피스 — service worker */
-const VERSION = "hmo-v3";
+const VERSION = "hmo-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -41,7 +41,7 @@ self.addEventListener("fetch", (e) => {
     || req.destination === "script";
   if (isCode) {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: "no-store", credentials: "same-origin" })
         .then((res) => {
           const copy = res.clone();
           caches.open(VERSION).then((c) => c.put(req, copy)).catch(() => {});

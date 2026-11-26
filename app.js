@@ -650,6 +650,9 @@
 
     renderRoom(); renderMemos(); renderTimeline(); renderStatus();
     tickClock(); applyMovePref();
+    // 맵 개편 첫 실행에는 본부 오피스를 먼저 보여준다 (한 번만)
+    const ui0 = load(LS.ui, {});
+    if (!ui0.mapIntro){ ui0.mapIntro = true; ui0.view = "map"; save(LS.ui, ui0); currentView = "map"; }
     setView(currentView || "map");
 
     await OfficeDB.init();

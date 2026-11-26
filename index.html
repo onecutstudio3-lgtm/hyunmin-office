@@ -215,9 +215,9 @@
     transition:background .18s,color .18s,transform .12s;
   }
   .chip-btn:active{transform:scale(.96);}
-  .chip-btn.toggle{background:var(--orange-soft); border-color:#F7DCC0; color:#C26114;}
-  .chip-btn.toggle.off{background:#fff; border-color:var(--line); color:#9C8A7A;}
-  .chip-btn .gdot{width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 0 2.5px var(--green-soft);}
+  .chip-btn.chip-move{background:var(--orange-soft); border-color:#F7DCC0; color:#C26114;}
+  .chip-btn.chip-move.off{background:#fff; border-color:var(--line); color:#9C8A7A;}
+  .chip-btn .gdot{display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 0 2.5px var(--green-soft);}
 
   .office{
     position:relative; margin-top:2px; border-radius:20px; overflow:hidden; background:#EADBC8;
@@ -484,7 +484,7 @@
     </div>
 
     <div class="chips">
-      <button class="chip-btn toggle" id="moveToggle" aria-pressed="true">✨ 움직임 <b id="moveState">ON</b></button>
+      <button class="chip-btn chip-move" id="moveToggle" aria-pressed="true">✨ 움직임 <b id="moveState">ON</b></button>
       <span class="chip-btn"><i class="gdot"></i><b>3</b>개 방 가동</span>
       <span class="chip-btn">👥 <b id="botOnCount">5</b>명 ON</span>
       <span class="chip-btn">🕒 <b id="officeClock">오후 1:00</b></span>
@@ -762,6 +762,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="./app.js"></script>
+<script src="./app.js?v=3"></script>
 </body>
 </html>
