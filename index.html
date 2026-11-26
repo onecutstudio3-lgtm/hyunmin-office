@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>박현민 AI 오피스</title>
-<meta name="description" content="현민님 전용 AI 오피스 — 나리·달이와 한 곳에서 지시하고 확인하는 모바일 앱">
+<meta name="description" content="현민님 전용 AI 오피스 — 나리·달이·혜민·뮤즈·키링과 한 곳에서 지시하고 확인하는 모바일 앱">
 <meta name="theme-color" content="#FAF7F2">
 <meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,6 +22,9 @@
     --beige:#FBF4EA; --beige-2:#F6ECDD;
     --orange:#EE8A3C; --orange-soft:#FDEEE0;
     --blue:#5E9EDC; --blue-soft:#E8F2FC;
+    --pink:#D9669C; --pink-soft:#FCEAF2;
+    --violet:#8A6BD1; --violet-soft:#F0EAFB;
+    --gold:#C9922B; --gold-soft:#FBF2D8;
     --green:#3E9C74; --green-soft:#E7F4EE;
     --shadow:0 6px 22px rgba(120,86,52,.07), 0 1px 2px rgba(120,86,52,.05);
     --r-card:22px;
@@ -100,12 +103,19 @@
 
   /* ---------- room ---------- */
   .subtabs{
-    background:var(--cream-2); border-radius:999px; padding:4px; display:flex; gap:4px;
+    background:var(--cream-2); border-radius:18px; padding:4px; display:flex; flex-direction:column; gap:4px;
   }
   .subtab{
     flex:1; height:38px; border-radius:999px; font-size:13px; font-weight:700; color:#7A6552;
     display:flex; align-items:center; justify-content:center; gap:5px; transition:all .18s;
   }
+  .subtab-all{width:100%; flex:none;}
+  .subtab-scroll{
+    display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; padding:1px; border-radius:999px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .subtab-scroll::-webkit-scrollbar{display:none;}
+  .subtab-scroll .subtab{flex:none; height:36px; padding:0 12px; font-size:12.5px; white-space:nowrap;}
   .subtab[aria-selected="true"]{background:#fff; color:#3B2C21; box-shadow:0 2px 8px rgba(140,105,70,.13);}
   .room-meta{display:flex; align-items:center; justify-content:space-between; margin:14px 2px 6px;}
   .room-meta .l{font-size:12px; color:var(--muted); font-weight:600;}
@@ -120,6 +130,11 @@
   }
   .msg.nari .face{background:var(--orange-soft);}
   .msg.dali .face{background:var(--blue-soft);}
+  .msg.hyemin .face{background:var(--pink-soft);}
+  .msg.muse .face{background:var(--violet-soft);}
+  .msg.keyring .face{background:var(--gold-soft);}
+  .msg.hark .face{background:#EFEAFB;}
+  .msg.claude .face{background:#F1E9DE;}
   .msg.me{flex-direction:row-reverse;}
   .msg .body{max-width:78%;}
   .msg .who{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; color:#4A382B; margin:0 0 5px 2px;}
@@ -128,6 +143,9 @@
   .badge{font-size:9.5px; font-weight:800; padding:1.5px 6px; border-radius:6px;}
   .badge.nari{background:var(--orange-soft); color:#D2701F;}
   .badge.dali{background:var(--blue-soft); color:#3672B0;}
+  .badge.pink{background:var(--pink-soft); color:#B5487B;}
+  .badge.violet{background:var(--violet-soft); color:#6646B8;}
+  .badge.gold{background:var(--gold-soft); color:#9C7414;}
   .bubble{
     background:var(--beige); color:#4A382B; padding:11px 13px; font-size:14px; line-height:1.55;
     border-radius:4px 16px 16px 16px; border:1px solid #F2E5D3;
@@ -176,6 +194,9 @@
   .agent .face{width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-size:16px;}
   .agent.nari .face{background:var(--orange-soft);}
   .agent.dali .face{background:var(--blue-soft);}
+  .agent.pink .face{background:var(--pink-soft);}
+  .agent.violet .face{background:var(--violet-soft);}
+  .agent.gold .face{background:var(--gold-soft);}
   .agent .who{font-size:12.5px; font-weight:800;}
   .agent .what{font-size:11px; color:var(--muted); font-weight:600;}
   .chip-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px;}
@@ -245,6 +266,8 @@
   .buddy.hark .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#E7E2F7 66%,#D2C9EE);}
   .buddy.claude .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#F0E7DC 66%,#DED0BE);}
   .buddy.key .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#FFF3CF 66%,#F5E0A6);}
+  .buddy.hyemin .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#FBE0EC 66%,#F3C0D6);}
+  .buddy.muse .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#EDE5FC 66%,#D6C8F4);}
   .buddy .tag{font-size:9px; font-weight:800; color:#fff; background:rgba(59,44,33,.6); padding:1px 6px; border-radius:999px; margin-top:3px; letter-spacing:-.02em;}
   .office.paused .buddy, .office.paused .buddy .bub{animation-play-state:paused;}
   @keyframes wander{
@@ -262,6 +285,7 @@
   .now-row:last-child{border-bottom:0; padding-bottom:0;}
   .now-row .ico{width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-size:16px; flex:none; background:var(--cream);}
   .now-row .ico.n{background:var(--orange-soft);} .now-row .ico.d{background:var(--blue-soft);}
+  .now-row .ico.p{background:var(--pink-soft);} .now-row .ico.v{background:var(--violet-soft);} .now-row .ico.g{background:var(--gold-soft);}
   .now-row .body{min-width:0; flex:1;}
   .now-row .t{font-size:13px; font-weight:800; color:#3B2C21;}
   .now-row .d{font-size:11px; color:var(--muted); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -342,6 +366,11 @@
   .bot .face{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-size:20px; flex:none;}
   .bot.nari .face{background:var(--orange-soft);}
   .bot.dali .face{background:var(--blue-soft);}
+  .bot.hyemin .face{background:var(--pink-soft);}
+  .bot.muse .face{background:var(--violet-soft);}
+  .bot.keyring .face{background:var(--gold-soft);}
+  .bot.hark .face{background:#EFEAFB;}
+  .bot.claude .face{background:#F1E9DE;}
   .bot .who{font-size:13.5px; font-weight:800; color:#3B2C21; display:flex; align-items:center; gap:6px;}
   .bot .what{font-size:11.5px; color:var(--muted); font-weight:600; margin-top:2px;}
   .bot .go{font-size:11.5px; font-weight:800; color:var(--brown); background:#FBF1E4; border-radius:999px; padding:6px 11px; flex:none;}
@@ -443,9 +472,8 @@
   <section class="view on" id="view-room">
     <div class="card" style="padding:14px 12px 12px">
       <div class="subtabs" role="tablist" aria-label="회의실">
-        <button class="subtab" role="tab" data-room="all" aria-selected="true">🏛️ 대회의실</button>
-        <button class="subtab" role="tab" data-room="nari" aria-selected="false">🧡 나리</button>
-        <button class="subtab" role="tab" data-room="dali" aria-selected="false">💙 달이</button>
+        <button class="subtab subtab-all" role="tab" data-room="all" aria-selected="true">🏛️ 대회의실</button>
+        <div class="subtab-scroll" id="subtabScroll" role="presentation"></div>
       </div>
       <div class="room-meta">
         <div class="l" id="roomTitle">🏛️ 원컷 · 클립 · 스레드 · 블로그</div>
@@ -485,7 +513,7 @@
 
     <div class="chips">
       <button class="chip-btn chip-move" id="moveToggle" aria-pressed="true">✨ 움직임 <b id="moveState">ON</b></button>
-      <span class="chip-btn"><i class="gdot"></i><b>3</b>개 방 가동</span>
+      <span class="chip-btn"><i class="gdot"></i><b id="roomCount">6</b>개 방 가동</span>
       <span class="chip-btn">👥 <b id="botOnCount">5</b>명 ON</span>
       <span class="chip-btn">🕒 <b id="officeClock">오후 1:00</b></span>
     </div>
@@ -505,41 +533,43 @@
         <span class="room-label" style="left:14%; top:38%">🧡 나리 지휘실</span>
       </div>
 
-      <!-- 달이·제이 라운지 -->
-      <div class="hotspot" role="button" tabindex="0" data-hot="dali" aria-label="달이·제이 라운지 입장"
+      <!-- 달이 라운지 -->
+      <div class="hotspot" role="button" tabindex="0" data-hot="dali" aria-label="달이 라운지 입장"
            style="left:45%; top:60%; width:54%; height:39%">
-        <span class="room-label" style="left:10%; top:6%">💙 달이·제이 라운지</span>
+        <span class="room-label" style="left:10%; top:6%">💙 달이 라운지</span>
+      </div>
+
+      <!-- 멤버 데스크: 혜민 · 뮤즈 · 키링 (1:1 방) -->
+      <div class="hotspot" role="button" tabindex="0" data-hot="hyemin" aria-label="혜민 1:1 방 입장"
+           style="left:2%; top:59%; width:38%; height:13%">
+        <span class="room-label" style="left:6%; top:26%">🌸 혜민</span>
+      </div>
+      <div class="hotspot" role="button" tabindex="0" data-hot="muse" aria-label="뮤즈 1:1 방 입장"
+           style="left:2%; top:72%; width:38%; height:13%">
+        <span class="room-label" style="left:6%; top:26%">🪄 뮤즈</span>
+      </div>
+      <div class="hotspot" role="button" tabindex="0" data-hot="keyring" aria-label="키링 1:1 방 입장"
+           style="left:2%; top:85%; width:38%; height:14%">
+        <span class="room-label" style="left:6%; top:26%">🔑 키링</span>
       </div>
 
       <!-- 움직이는 캐릭터 -->
       <div class="buddies" id="buddies">
-        <div class="buddy nari"  style="left:47%; top:47%; --dur:7.4s; --delay:.1s"><div class="bub">🧡</div><div class="tag">나리</div></div>
+        <div class="buddy nari"   style="left:47%; top:47%; --dur:7.4s; --delay:.1s"><div class="bub">🧡</div><div class="tag">나리</div></div>
         <div class="buddy claude" style="left:80%; top:27%; --dur:8.6s; --delay:.9s"><div class="bub">🤖</div><div class="tag">클로드</div></div>
-        <div class="buddy hark"  style="left:27%; top:66%; --dur:6.8s; --delay:.5s"><div class="bub">🦅</div><div class="tag">호크</div></div>
-        <div class="buddy dali"  style="left:58%; top:81%; --dur:8.1s; --delay:1.3s"><div class="bub">💙</div><div class="tag">달이</div></div>
-        <div class="buddy key"   style="left:75%; top:87%; --dur:7.8s; --delay:.3s"><div class="bub">🔑</div><div class="tag">제이</div></div>
+        <div class="buddy hark"   style="left:20%; top:50%; --dur:6.8s; --delay:.5s"><div class="bub">🦅</div><div class="tag">호크</div></div>
+        <div class="buddy dali"   style="left:58%; top:81%; --dur:8.1s; --delay:1.3s"><div class="bub">💙</div><div class="tag">달이</div></div>
+        <div class="buddy hyemin" style="left:32%; top:64%; --dur:7.2s; --delay:.7s"><div class="bub">🌸</div><div class="tag">혜민</div></div>
+        <div class="buddy muse"   style="left:32%; top:77%; --dur:8.4s; --delay:1.1s"><div class="bub">🪄</div><div class="tag">뮤즈</div></div>
+        <div class="buddy key"    style="left:32%; top:90%; --dur:7.7s; --delay:.4s"><div class="bub">🔑</div><div class="tag">키링</div></div>
       </div>
     </div>
     <p class="office-note">클릭 공간을 열면 지시·메모·회의가 이어집니다</p>
 
     <!-- 지금 본부에서는 -->
     <div class="card">
-      <div class="card-head"><h2>지금 본부에서는</h2><span class="hint">3개 방 · 5명</span></div>
-      <div class="now-row">
-        <div class="ico">🏛️</div>
-        <div class="body"><div class="t">대회의실</div><div class="d">원컷 · 클립 · 스레드 · 블로그 한 번에 지시</div></div>
-        <button class="go" data-open-room="all">입장 →</button>
-      </div>
-      <div class="now-row">
-        <div class="ico n">🧡</div>
-        <div class="body"><div class="t">나리 지휘실</div><div class="d">클립 27호 배달 · 스레드 3회 진행 중</div></div>
-        <button class="go" data-open-room="nari">입장 →</button>
-      </div>
-      <div class="now-row">
-        <div class="ico d">💙</div>
-        <div class="body"><div class="t">달이·제이 라운지</div><div class="d">블로그 · 당근 · 스마트스토어 주문 처리</div></div>
-        <button class="go" data-open-room="dali">입장 →</button>
-      </div>
+      <div class="card-head"><h2>지금 본부에서는</h2><span class="hint" id="nowHint">6개 방 · 7명</span></div>
+      <div id="nowList"></div>
     </div>
 
     <!-- 파이프라인 요약 (기존 정보 유지) -->
@@ -701,17 +731,8 @@
   <!-- ================= 봇 ================= -->
   <section class="view" id="view-bots">
     <div class="card">
-      <div class="card-head"><h2>🤖 이 오피스의 봇</h2><span class="hint">2명 활동 중</span></div>
-      <div class="bot nari">
-        <div class="face">🧡</div>
-        <div style="flex:1"><div class="who">나리 <span class="badge nari">오렌지</span></div><div class="what">원컷스튜디오 · 클립 · 스레드 · 크몽</div></div>
-        <button class="go" data-open-room="nari">1:1 열기</button>
-      </div>
-      <div class="bot dali">
-        <div class="face">💙</div>
-        <div style="flex:1"><div class="who">달이 <span class="badge dali">블루</span></div><div class="what">블로그 · 당근 · 스마트스토어 · 체험단</div></div>
-        <button class="go" data-open-room="dali">1:1 열기</button>
-      </div>
+      <div class="card-head"><h2>🤖 이 오피스의 봇</h2><span class="hint" id="botCount">7명 등록</span></div>
+      <div id="botList"></div>
     </div>
     <div class="card">
       <div class="card-head"><h2>AI 서버</h2><span class="hint">이 기기</span></div>
@@ -762,6 +783,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="./app.js?v=3"></script>
+<script src="./app.js?v=4"></script>
 </body>
 </html>

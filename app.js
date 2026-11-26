@@ -36,12 +36,24 @@
 
   /* ---------- 봇 ---------- */
   const BOTS = {
-    nari:    { name:"나리",   emoji:"🧡", face:"🧡", label:"오렌지",  color:"nari" },
-    dali:    { name:"달이",   emoji:"💙", face:"💙", label:"블루",    color:"dali" },
-    hark:    { name:"호크",   emoji:"🦅", face:"🦅", label:"Hark",    color:"dali" },
-    claude:  { name:"클로드", emoji:"🤖", face:"🤖", label:"Claude",  color:"nari" },
-    keyring: { name:"키링",   emoji:"🔑", face:"🔑", label:"Keyring", color:"dali" }
+    nari:    { name:"나리",   emoji:"🧡", face:"🧡", label:"오렌지",  color:"nari",   what:"원컷스튜디오 · 클립 · 스레드 · 크몽" },
+    dali:    { name:"달이",   emoji:"💙", face:"💙", label:"블루",    color:"dali",   what:"블로그 · 당근 · 스마트스토어 · 체험단" },
+    hyemin:  { name:"혜민",   emoji:"🌸", face:"🌸", label:"핑크",    color:"pink",   what:"1:1 대화 · 지시·보고" },
+    muse:    { name:"뮤즈",   emoji:"🪄", face:"🪄", label:"바이올렛", color:"violet", what:"1:1 대화 · 지시·보고" },
+    keyring: { name:"키링",   emoji:"🔑", face:"🔑", label:"Keyring", color:"gold",   what:"지시 기록 · 보고 정리" },
+    hark:    { name:"호크",   emoji:"🦅", face:"🦅", label:"Hark",    color:"dali",   what:"대회의실 · 연결 대기" },
+    claude:  { name:"클로드", emoji:"🤖", face:"🤖", label:"Claude",  color:"nari",   what:"대회의실 · 연결 대기" }
   };
+
+  /* ---------- 방 (대회의실 + 1:1) ---------- */
+  const ROOMS = [
+    { id:"all",     emoji:"🏛️", title:"🏛️ 원컷 · 클립 · 스레드 · 블로그", nowTitle:"대회의실",   now:"원컷 · 클립 · 스레드 · 블로그 한 번에 지시", tone:"" },
+    { id:"nari",    emoji:"🧡", title:"🧡 나리 · 1:1",   nowTitle:"나리 지휘실", now:"클립 27호 배달 · 스레드 3회 진행 중", tone:"n" },
+    { id:"dali",    emoji:"💙", title:"💙 달이 · 1:1",   nowTitle:"달이 라운지", now:"블로그 · 당근 · 스마트스토어 주문 처리", tone:"d" },
+    { id:"hyemin",  emoji:"🌸", title:"🌸 혜민 · 1:1",   nowTitle:"혜민 데스크", now:"1:1 방 · 지시와 보고", tone:"p" },
+    { id:"muse",    emoji:"🪄", title:"🪄 뮤즈 · 1:1",   nowTitle:"뮤즈 데스크", now:"1:1 방 · 지시와 보고", tone:"v" },
+    { id:"keyring", emoji:"🔑", title:"🔑 키링 · 1:1",   nowTitle:"키링 데스크", now:"지시 기록 · 보고 정리", tone:"g" }
+  ];
 
   function localDateKey(d){
     d = d || new Date();
@@ -328,8 +340,7 @@
   function msgKind(m){
     if (!m) return "system";
     if (m.sender === "user") return "user";
-    if (m.sender === "nari") return "nari";
-    if (m.sender === "dali") return "dali";
+    if (BOTS[m.sender]) return m.sender;   // nari·dali·hyemin·muse·keyring·hark·claude
     return "system";
   }
   function renderRoom(){
@@ -353,7 +364,7 @@
       const me = kind === "user";
       const bot = me ? null : (BOTS[kind] || { name: esc(kind), emoji:"🤖", face:"🤖", label:"AI", color:"dali" });
       const el = document.createElement("div");
-      el.className = "msg " + (me ? "me" : (kind === "nari" ? "nari" : "dali"));
+      el.className = "msg " + (me ? "me" : kind);
       if (me){
         el.innerHTML = '<div class="body"><div class="bubble"></div><div class="foot">' + esc(hhmm(m.created_at)) + '</div></div>';
         el.querySelector(".bubble").textContent = m.text;
@@ -375,22 +386,55 @@
     requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
   }
 
-  $$(".subtab").forEach(t => t.addEventListener("click", () => {
-    $$(".subtab").forEach(x => x.setAttribute("aria-selected", "false"));
-    t.setAttribute("aria-selected", "true");
-    currentRoom = t.dataset.room;
-    const meta = {
-      all:  ["🏛️ 원컷 · 클립 · 스레드 · 블로그", "ON 2명"],
-      nari: ["🧡 나리 · 1:1", "나리 활동 중"],
-      dali: ["💙 달이 · 1:1", "달이 활동 중"]
-    }[currentRoom];
-    $("#roomTitle").textContent = meta[0];
-    $("#roomOn").textContent = meta[1];
-    $("#msgInput").placeholder = currentRoom === "all"
+  /* ---------- 방 탭: 대회의실 + 1:1 (ROOMS 기준으로 생성) ---------- */
+  const ROOM_BY_ID = {};
+  ROOMS.forEach(r => { ROOM_BY_ID[r.id] = r; });
+  ROOM_BY_ID.all.on = "ON " + Object.keys(BOTS).length + "명";
+
+  function roomTabLabel(r){
+    const b = BOTS[r.id];
+    return (r.emoji || (b && b.emoji) || "🤖") + " " + (b ? b.name : r.id);
+  }
+  function buildSubtabs(){
+    const wrap = $("#subtabScroll");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    ROOMS.filter(r => r.id !== "all").forEach(r => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "subtab";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", "false");
+      b.dataset.room = r.id;
+      b.textContent = roomTabLabel(r);
+      wrap.appendChild(b);
+    });
+  }
+
+  function selectRoom(room){
+    if (!ROOM_BY_ID[room]) room = "all";
+    currentRoom = room;
+    $$(".subtab").forEach(x => x.setAttribute("aria-selected", String(x.dataset.room === room)));
+    const meta = ROOM_BY_ID[room];
+    const bot = BOTS[room];
+    const tn = $("#roomTitle");
+    if (tn) tn.textContent = meta.title || (roomTabLabel(meta) + " · 1:1");
+    const on = $("#roomOn");
+    if (on) on.textContent = meta.on || (bot ? bot.name + " 활동 중" : "");
+    const input = $("#msgInput");
+    if (input) input.placeholder = (room === "all")
       ? "대장님, 지시를 한 줄로 (@all = 전원)"
-      : "대장님, " + BOTS[currentRoom].name + "에게 한 줄 지시";
+      : "대장님, " + (bot ? bot.name : room) + "에게 한 줄 지시";
+    const sel = $$(".subtab").find(x => x.dataset.room === room);
+    if (sel && sel.scrollIntoView){ try{ sel.scrollIntoView({ block:"nearest", inline:"nearest" }); }catch(e){} }
     renderRoom();
-  }));
+  }
+
+  const subtabsEl = $(".subtabs");
+  if (subtabsEl) subtabsEl.addEventListener("click", e => {
+    const t = e.target && e.target.closest ? e.target.closest(".subtab") : null;
+    if (t && t.dataset.room) selectRoom(t.dataset.room);
+  });
 
   async function sendMessage(){
     const input = $("#msgInput");
@@ -566,13 +610,67 @@
     toast(ok ? "새로고침 완료 · " + nowTime() : "연결 실패 · " + (OfficeDB.lastError || "네트워크"));
   });
 
-  /* ---------- 봇 → 1:1 ---------- */
-  $$("[data-open-room]").forEach(b => b.addEventListener("click", () => {
-    const r = b.dataset.openRoom;
-    setView("room");
-    const target = $$(".subtab").find(t => t.dataset.room === r);
-    if (target) target.click();
-  }));
+  /* ---------- 봇 → 1:1 (동적으로 그리는 버튼까지 위임으로 처리) ---------- */
+  document.addEventListener("click", e => {
+    const btn = e.target && e.target.closest ? e.target.closest("[data-open-room]") : null;
+    if (!btn) return;
+    enterRoom(btn.dataset.openRoom || "all");
+  });
+
+  /* ---------- 봇 목록 (BOTS 기준) ---------- */
+  function renderBots(){
+    const list = $("#botList");
+    if (!list) return;
+    list.innerHTML = "";
+    const keys = Object.keys(BOTS);
+    keys.forEach(k => {
+      const b = BOTS[k];
+      const hasRoom = !!ROOM_BY_ID[k];
+      const el = document.createElement("div");
+      el.className = "bot " + k;
+      const face = document.createElement("div"); face.className = "face"; face.textContent = b.face;
+      const body = document.createElement("div"); body.style.flex = "1"; body.style.minWidth = "0";
+      const who = document.createElement("div"); who.className = "who"; who.textContent = b.name + " ";
+      const badge = document.createElement("span"); badge.className = "badge " + b.color; badge.textContent = b.label;
+      who.appendChild(badge);
+      const what = document.createElement("div"); what.className = "what"; what.textContent = b.what || "";
+      body.appendChild(who); body.appendChild(what);
+      const go = document.createElement("button");
+      go.type = "button";
+      go.className = "go";
+      go.dataset.openRoom = hasRoom ? k : "all";
+      go.textContent = hasRoom ? "1:1 열기" : "대회의실";
+      el.appendChild(face); el.appendChild(body); el.appendChild(go);
+      list.appendChild(el);
+    });
+    const hint = $("#botCount");
+    if (hint) hint.textContent = keys.length + "명 등록 · " + (ROOMS.length - 1) + "개 1:1 방";
+  }
+
+  /* ---------- 지금 본부에서는 (ROOMS 기준) ---------- */
+  function renderNow(){
+    const box = $("#nowList");
+    if (!box) return;
+    box.innerHTML = "";
+    ROOMS.forEach(r => {
+      const b = BOTS[r.id];
+      const row = document.createElement("div"); row.className = "now-row";
+      const ico = document.createElement("div");
+      ico.className = "ico" + (r.tone ? " " + r.tone : "");
+      ico.textContent = r.emoji || (b ? b.emoji : "🤖");
+      const body = document.createElement("div"); body.className = "body";
+      const t = document.createElement("div"); t.className = "t";
+      t.textContent = r.nowTitle || (b ? b.name : r.id);
+      const d = document.createElement("div"); d.className = "d"; d.textContent = r.now || "";
+      body.appendChild(t); body.appendChild(d);
+      const go = document.createElement("button"); go.type = "button"; go.className = "go";
+      go.dataset.openRoom = r.id; go.textContent = "입장 →";
+      row.appendChild(ico); row.appendChild(body); row.appendChild(go);
+      box.appendChild(row);
+    });
+    const hint = $("#nowHint");
+    if (hint) hint.textContent = ROOMS.length + "개 방 · " + Object.keys(BOTS).length + "명";
+  }
 
   /* ---------- 절약 모드 토글 ---------- */
   const prefs = load(LS.prefs, { night:true, digest:false, lite:true });
@@ -618,11 +716,13 @@
 
   const botCountEl = $("#botOnCount");
   if (botCountEl) botCountEl.textContent = String(Object.keys(BOTS).length);
+  const roomCountEl = $("#roomCount");
+  if (roomCountEl) roomCountEl.textContent = String(ROOMS.length);
 
   function enterRoom(room){
+    if (!ROOM_BY_ID[room]) room = "all";
     setView("room");
-    const t = $$(".subtab").find(x => x.dataset.room === room);
-    if (t) t.click();
+    selectRoom(room);
   }
   $$(".hotspot").forEach(h => {
     const go = () => enterRoom(h.dataset.hot || "all");
@@ -648,6 +748,8 @@
     const todayText = (d0.getMonth()+1) + "월 " + d0.getDate() + "일 " + "일월화수목금토"[d0.getDay()] + "요일";
     const tt = $("#todayText"); if (tt) tt.textContent = todayText;
 
+    buildSubtabs(); selectRoom(currentRoom);
+    renderBots(); renderNow();
     renderRoom(); renderMemos(); renderTimeline(); renderStatus();
     tickClock(); applyMovePref();
     // 맵 개편 첫 실행에는 본부 오피스를 먼저 보여준다 (한 번만)
