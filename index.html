@@ -24,6 +24,7 @@
     --blue:#5E9EDC; --blue-soft:#E8F2FC;
     --pink:#D9669C; --pink-soft:#FCEAF2;
     --violet:#8A6BD1; --violet-soft:#F0EAFB;
+    --mint:#2FA88A; --mint-soft:#E3F5EF;
     --gold:#C9922B; --gold-soft:#FBF2D8;
     --green:#3E9C74; --green-soft:#E7F4EE;
     --shadow:0 6px 22px rgba(120,86,52,.07), 0 1px 2px rgba(120,86,52,.05);
@@ -117,9 +118,15 @@
   .subtab-scroll::-webkit-scrollbar{display:none;}
   .subtab-scroll .subtab{flex:none; height:36px; padding:0 10px; font-size:12.5px; white-space:nowrap;}
   .subtab[aria-selected="true"]{background:#fff; color:#3B2C21; box-shadow:0 2px 8px rgba(140,105,70,.13);}
+  .subtab[data-room="hyemin"][aria-selected="true"]{background:var(--pink-soft); color:#B5487B;}
+  .subtab[data-room="muse"][aria-selected="true"]{background:var(--mint-soft); color:#1F7A63;}
+  .subtab[data-room="keyring"][aria-selected="true"]{background:var(--gold-soft); color:#9C7414;}
   .room-meta{display:flex; align-items:center; justify-content:space-between; margin:14px 2px 6px;}
   .room-meta .l{font-size:12px; color:var(--muted); font-weight:600;}
   .on-badge{font-size:11px; font-weight:800; color:var(--green); background:var(--green-soft); border-radius:999px; padding:3px 9px;}
+  .room-rule{margin:8px 2px 4px; padding:10px 12px; border-radius:14px; background:#FDF6EC; border:1px dashed #E8D2B8; font-size:12px; line-height:1.55; color:#6B5645;}
+  .room-rule b{color:#3B2C21;}
+  .room-rule .steps{display:block; margin-top:2px;}
 
   .chat{max-height:54vh; overflow-y:auto; padding:6px 2px 2px; scroll-behavior:smooth;}
   .chat::-webkit-scrollbar{width:0;}
@@ -131,8 +138,12 @@
   .msg.nari .face{background:var(--orange-soft);}
   .msg.dali .face{background:var(--blue-soft);}
   .msg.hyemin .face{background:var(--pink-soft);}
-  .msg.muse .face{background:var(--violet-soft);}
+  .msg.muse .face{background:var(--mint-soft);}
+  .msg.hyemin .bubble{background:#FCEAF4; border-color:#F3C6DA;}
+  .msg.muse .bubble{background:#EAF7F1; border-color:#BFE8D8;}
   .msg.keyring .face{background:var(--gold-soft);}
+  .msg.juno .face{background:var(--violet-soft);}
+  .msg.juno .bubble{background:#F3EEFC; border-color:#D9CDF2;}
   .msg.hark .face{background:#EFEAFB;}
   .msg.claude .face{background:#F1E9DE;}
   .msg.me{flex-direction:row-reverse;}
@@ -145,6 +156,7 @@
   .badge.dali{background:var(--blue-soft); color:#3672B0;}
   .badge.pink{background:var(--pink-soft); color:#B5487B;}
   .badge.violet{background:var(--violet-soft); color:#6646B8;}
+  .badge.mint{background:var(--mint-soft); color:#1F7A63;}
   .badge.gold{background:var(--gold-soft); color:#9C7414;}
   .bubble{
     background:var(--beige); color:#4A382B; padding:11px 13px; font-size:14px; line-height:1.55;
@@ -196,6 +208,7 @@
   .agent.dali .face{background:var(--blue-soft);}
   .agent.pink .face{background:var(--pink-soft);}
   .agent.violet .face{background:var(--violet-soft);}
+  .agent.mint .face{background:var(--mint-soft);}
   .agent.gold .face{background:var(--gold-soft);}
   .agent .who{font-size:12.5px; font-weight:800;}
   .agent .what{font-size:11px; color:var(--muted); font-weight:600;}
@@ -267,7 +280,7 @@
   .buddy.claude .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#F0E7DC 66%,#DED0BE);}
   .buddy.key .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#FFF3CF 66%,#F5E0A6);}
   .buddy.hyemin .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#FBE0EC 66%,#F3C0D6);}
-  .buddy.muse .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#EDE5FC 66%,#D6C8F4);}
+  .buddy.muse .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#DFF5EC 66%,#AEE6D2);}
   .buddy .tag{font-size:9px; font-weight:800; color:#fff; background:rgba(59,44,33,.6); padding:1px 6px; border-radius:999px; margin-top:3px; letter-spacing:-.02em;}
   .office.paused .buddy, .office.paused .buddy .bub{animation-play-state:paused;}
   @keyframes wander{
@@ -285,7 +298,7 @@
   .now-row:last-child{border-bottom:0; padding-bottom:0;}
   .now-row .ico{width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-size:16px; flex:none; background:var(--cream);}
   .now-row .ico.n{background:var(--orange-soft);} .now-row .ico.d{background:var(--blue-soft);}
-  .now-row .ico.p{background:var(--pink-soft);} .now-row .ico.v{background:var(--violet-soft);} .now-row .ico.g{background:var(--gold-soft);}
+  .now-row .ico.p{background:var(--pink-soft);} .now-row .ico.m{background:var(--mint-soft);} .now-row .ico.g{background:var(--gold-soft);}
   .now-row .body{min-width:0; flex:1;}
   .now-row .t{font-size:13px; font-weight:800; color:#3B2C21;}
   .now-row .d{font-size:11px; color:var(--muted); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -367,8 +380,9 @@
   .bot.nari .face{background:var(--orange-soft);}
   .bot.dali .face{background:var(--blue-soft);}
   .bot.hyemin .face{background:var(--pink-soft);}
-  .bot.muse .face{background:var(--violet-soft);}
+  .bot.muse .face{background:var(--mint-soft);}
   .bot.keyring .face{background:var(--gold-soft);}
+  .bot.juno .face{background:var(--violet-soft);}
   .bot.hark .face{background:#EFEAFB;}
   .bot.claude .face{background:#F1E9DE;}
   .bot .who{font-size:13.5px; font-weight:800; color:#3B2C21; display:flex; align-items:center; gap:6px;}
@@ -479,6 +493,10 @@
         <div class="l" id="roomTitle">🏛️ 원컷 · 클립 · 스레드 · 블로그</div>
         <div class="on-badge" id="roomOn">ON 2명</div>
       </div>
+      <div class="room-rule" id="roomRule" role="note" aria-label="대회의실 3단계 협의 규칙">
+        <b>📌 대회의실 3단계 협의 규칙</b>
+        <span class="steps">대장님이 지시하면 ① 1차: 각자 맡은 영역 관점 1개씩만 짧게 제시 (중복 금지) · ② 2차: 서로 빠진 조건·리스크 교차 보완 · ③ 최종: 1명이 합의된 최적 결론 1안만 <b>[최종 결론]</b>으로 보고</span>
+      </div>
       <div class="chat" id="chat"></div>
       <div class="composer">
         <button class="plus" id="plusBtn" aria-label="첨부">+</button>
@@ -546,7 +564,7 @@
       </div>
       <div class="hotspot" role="button" tabindex="0" data-hot="muse" aria-label="뮤즈 1:1 방 입장"
            style="left:2%; top:72%; width:38%; height:13%">
-        <span class="room-label" style="left:6%; top:26%">🪄 뮤즈</span>
+        <span class="room-label" style="left:6%; top:26%">🌿 뮤즈</span>
       </div>
       <div class="hotspot" role="button" tabindex="0" data-hot="keyring" aria-label="키링 1:1 방 입장"
            style="left:2%; top:85%; width:38%; height:14%">
@@ -560,7 +578,7 @@
         <div class="buddy hark"   style="left:20%; top:50%; --dur:6.8s; --delay:.5s"><div class="bub">🦅</div><div class="tag">호크</div></div>
         <div class="buddy dali"   style="left:58%; top:81%; --dur:8.1s; --delay:1.3s"><div class="bub">💙</div><div class="tag">달이</div></div>
         <div class="buddy hyemin" style="left:32%; top:64%; --dur:7.2s; --delay:.7s"><div class="bub">🌸</div><div class="tag">혜민</div></div>
-        <div class="buddy muse"   style="left:32%; top:77%; --dur:8.4s; --delay:1.1s"><div class="bub">🪄</div><div class="tag">뮤즈</div></div>
+        <div class="buddy muse"   style="left:32%; top:77%; --dur:8.4s; --delay:1.1s"><div class="bub">🌿</div><div class="tag">뮤즈</div></div>
         <div class="buddy key"    style="left:32%; top:90%; --dur:7.7s; --delay:.4s"><div class="bub">🔑</div><div class="tag">키링</div></div>
       </div>
     </div>

@@ -38,9 +38,10 @@
   const BOTS = {
     nari:    { name:"나리",   emoji:"🧡", face:"🧡", label:"오렌지",  color:"nari",   what:"원컷스튜디오 · 클립 · 스레드 · 크몽" },
     dali:    { name:"달이",   emoji:"💙", face:"💙", label:"블루",    color:"dali",   what:"블로그 · 당근 · 스마트스토어 · 체험단" },
-    hyemin:  { name:"혜민",   emoji:"🌸", face:"🌸", label:"핑크",    color:"pink",   what:"1:1 대화 · 지시·보고" },
-    muse:    { name:"뮤즈",   emoji:"🪄", face:"🪄", label:"바이올렛", color:"violet", what:"1:1 대화 · 지시·보고" },
+    hyemin:  { name:"혜민",   emoji:"🌸", face:"🌸", label:"보라핑크", color:"pink",   what:"1:1 대화 · 지시·보고" },
+    muse:    { name:"뮤즈",   emoji:"🌿", face:"🌿", label:"민트",    color:"mint",   what:"1:1 대화 · 지시·보고" },
     keyring: { name:"키링",   emoji:"🔑", face:"🔑", label:"Keyring", color:"gold",   what:"지시 기록 · 보고 정리" },
+    juno:    { name:"주노",   emoji:"🪐", face:"🪐", label:"바이올렛", color:"violet", what:"대회의실 협의 · 교차 보완" },
     hark:    { name:"호크",   emoji:"🦅", face:"🦅", label:"Hark",    color:"dali",   what:"대회의실 · 연결 대기" },
     claude:  { name:"클로드", emoji:"🤖", face:"🤖", label:"Claude",  color:"nari",   what:"대회의실 · 연결 대기" }
   };
@@ -51,7 +52,7 @@
     { id:"nari",    emoji:"🧡", title:"🧡 나리 · 1:1",   nowTitle:"나리 지휘실", now:"클립 27호 배달 · 스레드 3회 진행 중", tone:"n" },
     { id:"dali",    emoji:"💙", title:"💙 달이 · 1:1",   nowTitle:"달이 라운지", now:"블로그 · 당근 · 스마트스토어 주문 처리", tone:"d" },
     { id:"hyemin",  emoji:"🌸", title:"🌸 혜민 · 1:1",   nowTitle:"혜민 데스크", now:"1:1 방 · 지시와 보고", tone:"p" },
-    { id:"muse",    emoji:"🪄", title:"🪄 뮤즈 · 1:1",   nowTitle:"뮤즈 데스크", now:"1:1 방 · 지시와 보고", tone:"v" },
+    { id:"muse",    emoji:"🌿", title:"🌿 뮤즈 · 1:1",   nowTitle:"뮤즈 데스크", now:"1:1 방 · 지시와 보고", tone:"m" },
     { id:"keyring", emoji:"🔑", title:"🔑 키링 · 1:1",   nowTitle:"키링 데스크", now:"지시 기록 · 보고 정리", tone:"g" }
   ];
 
@@ -340,7 +341,7 @@
   function msgKind(m){
     if (!m) return "system";
     if (m.sender === "user") return "user";
-    if (BOTS[m.sender]) return m.sender;   // nari·dali·hyemin·muse·keyring·hark·claude
+    if (BOTS[m.sender]) return m.sender;   // nari·dali·hyemin·muse·keyring·juno·hark·claude
     return "system";
   }
   function renderRoom(){
@@ -421,6 +422,8 @@
     if (tn) tn.textContent = meta.title || (roomTabLabel(meta) + " · 1:1");
     const on = $("#roomOn");
     if (on) on.textContent = meta.on || (bot ? bot.name + " 활동 중" : "");
+    const rule = $("#roomRule");
+    if (rule) rule.style.display = (room === "all") ? "" : "none";
     const input = $("#msgInput");
     if (input) input.placeholder = (room === "all")
       ? "대장님, 지시를 한 줄로 (@all = 전원)"
