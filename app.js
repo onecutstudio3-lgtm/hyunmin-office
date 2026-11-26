@@ -656,21 +656,24 @@
     const usable = list
       .filter(m => m && m.name && Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
       .map(m => String(m.name).replace(/^models\//, ""));
-    return usable.find(n => /gemini-2\.5-flash$/i.test(n))
-      || usable.find(n => /gemini.*flash/i.test(n))
-      || usable.find(n => /gemini/i.test(n))
+    return usable.find(n => /^gemini-3\.5-flash-lite$/i.test(n))
+      || usable.find(n => /^gemini-3\.8-flash$/i.test(n))
+      || usable.find(n => /^gemini-3\.6-flash$/i.test(n))
+      || usable.find(n => /gemini-3.*flash/i.test(n))
+      || usable.find(n => /flash-latest/i.test(n))
       || usable[0] || null;
   }
 
-  /* Gemini REST 호출: x-goog-api-key 헤더 사용 (AIza·AQ. 모두 지원) + 404 시 모델 자동 탐색 */
+  /* Gemini REST 호출: 신규 유저용 Gemini 3 시리즈 우선 (2.5/2.0은 신규 계정 404 제한 대응) */
   async function callGemini(body){
     const key = aiKey();
     if (!key) throw aiErr("NO_KEY", "Gemini 키 없음");
     const attempts = [
-      { model:"gemini-2.5-flash", thinkBudget:0 },
-      { model:"gemini-2.5-flash", thinkBudget:null },
-      { model:"gemini-2.0-flash", thinkBudget:null },
-      { model:"gemini-2.5-flash-lite", thinkBudget:null }
+      { model:"gemini-3.5-flash-lite", thinkBudget:null },
+      { model:"gemini-3.8-flash", thinkBudget:null },
+      { model:"gemini-3.6-flash", thinkBudget:null },
+      { model:"gemini-flash-latest", thinkBudget:null },
+      { model:"gemini-2.5-flash", thinkBudget:0 }
     ];
     let last = null;
     let dropSchema = false;
