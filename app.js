@@ -650,7 +650,10 @@
     const attempts = [
       { model:"gemini-2.5-flash", thinkBudget:0 },
       { model:"gemini-2.5-flash", thinkBudget:null },
-      { model:"gemini-2.0-flash", thinkBudget:null }
+      { model:"gemini-2.5-flash-lite", thinkBudget:null },
+      { model:"gemini-2.0-flash", thinkBudget:null },
+      { model:"gemini-2.0-flash-lite", thinkBudget:null },
+      { model:"gemini-1.5-flash", thinkBudget:null }
     ];
     let last = null;
     let dropSchema = false;
@@ -662,8 +665,8 @@
       if (dropSchema){ delete gc.responseSchema; }
       try{
         const res = await fetchWithTimeout(
-          GEMINI_BASE + a.model + ":generateContent?key=" + encodeURIComponent(key),
-          { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) },
+          GEMINI_BASE + a.model + ":generateContent",
+          { method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": key }, body: JSON.stringify(payload) },
           60000
         );
         const data = await res.json().catch(() => null);
@@ -922,7 +925,8 @@
         contents: [{ role:"user", parts:[{ text:"핑. '연결됨'이라고만 답해." }] }],
         generationConfig: { temperature:0, maxOutputTokens: 24 }
       });
-      toast("✅ Gemini 연결됨 · " + String(t).replace(/\s+/g, " ").slice(0, 40));
+      if (typed) { try{ localStorage.setItem(AI_ON_LS, "1"); }catch(err){} if (inp) inp.value = ""; }
+      toast("✅ Gemini 연결됨 · 바로 사용 가능해요!");
     }catch(e){
       if (typed && !oldKey){ try{ localStorage.removeItem(AI_KEY_LS); }catch(err){} }
       if (typed && oldKey){ try{ localStorage.setItem(AI_KEY_LS, oldKey); }catch(err){} }

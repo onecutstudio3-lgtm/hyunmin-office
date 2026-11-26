@@ -1,5 +1,5 @@
 /* 박현민 AI 오피스 — service worker */
-const VERSION = "hmo-v9";
+const VERSION = "hmo-v10";
 const ASSETS = [
   "./",
   "./index.html",
