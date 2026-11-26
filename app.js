@@ -664,17 +664,19 @@
       || usable[0] || null;
   }
 
-  /* Gemini REST 호출: 신규 유저용 Gemini 3 시리즈 우선 (2.5/2.0은 신규 계정 404 제한 대응) */
+  /* Gemini REST 호출: 성공 모델 캐시 + thinking 최소화(속도 3배) + 신규 3.x 우선 */
+  const AI_MODEL_LS = "hmo_gemini_model";
   async function callGemini(body){
     const key = aiKey();
     if (!key) throw aiErr("NO_KEY", "Gemini 키 없음");
-    const attempts = [
-      { model:"gemini-3.5-flash-lite", thinkBudget:null },
-      { model:"gemini-3.8-flash", thinkBudget:null },
-      { model:"gemini-3.6-flash", thinkBudget:null },
-      { model:"gemini-flash-latest", thinkBudget:null },
-      { model:"gemini-2.5-flash", thinkBudget:0 }
-    ];
+    let cached = "";
+    try{ cached = localStorage.getItem(AI_MODEL_LS) || ""; }catch(e){}
+    const baseModels = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-flash-latest"];
+    const ordered = cached ? [cached].concat(baseModels.filter(m => m !== cached)) : baseModels;
+    const attempts = [];
+    ordered.forEach((m, idx) => {
+      attempts.push({ model: m, thinkBudget: idx === 0 ? 0 : null });
+    });
     let last = null;
     let dropSchema = false;
     let discoveredTried = false;
@@ -688,7 +690,7 @@
         const res = await fetchWithTimeout(
           GEMINI_BASE + a.model + ":generateContent",
           { method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": key }, body: JSON.stringify(payload) },
-          60000
+          45000
         );
         const data = await res.json().catch(() => null);
         if (!res.ok){
@@ -699,6 +701,9 @@
           e.reason = reasons[0] || er.status || "";
           if (res.status === 400 && /API_KEY/i.test(String(e.reason) + " " + String(e.message))) e.fatal = true;
           if (res.status === 401 || res.status === 403) e.fatal = true;
+          if (res.status === 400 && gc.thinkingConfig && !attempts.some(x => x.model === a.model && x.thinkBudget === null)){
+            attempts.splice(i + 1, 0, { model: a.model, thinkBudget: null });
+          }
           if (res.status === 400 && gc.responseSchema) dropSchema = true;
           throw e;
         }
@@ -711,6 +716,7 @@
           e.reason = (cand && cand.finishReason) || "EMPTY";
           throw e;
         }
+        try{ localStorage.setItem(AI_MODEL_LS, a.model); }catch(err){}
         return text;
       }catch(e){
         last = e;
@@ -772,32 +778,21 @@
   }
 
   async function askAll(text){
-    const schema = {
-      type: "OBJECT",
-      properties: {
-        messages: {
-          type: "ARRAY",
-          items: {
-            type: "OBJECT",
-            properties: {
-              sender: { type:"STRING", enum:["nari","dali","keyring","juno"] },
-              text: { type:"STRING" }
-            },
-            required: ["sender","text"]
-          }
-        }
-      },
-      required: ["messages"]
-    };
-    const prompt = "[대회의실 대화록 · 최근 10건]\n" + transcript("all", 10) +
+    const prompt = "[대회의실 대화록 · 최근 6건]\n" + transcript("all", 6) +
       "\n\n[대장님 지시]\n" + text +
-      "\n\n위 지시로 3단계 협의(1차 의견 → 2차 보완 → [최종 결론])를 만들어 messages로 돌려줘라.";
-    const raw = await callGemini({
-      systemInstruction: { parts:[{ text: ALL_BRIEF }] },
-      contents: [{ role:"user", parts:[{ text: prompt }] }],
-      generationConfig: { temperature:0.9, maxOutputTokens: 1600, responseMimeType:"application/json", responseSchema: schema }
-    });
-    return parsePlan(raw);
+      '\n\n위 지시에 대해 4명이 각 1~2줄씩 아주 짧고 핵심만 답해 {"messages":[{"sender":"nari|dali|keyring|juno","text":"..."}]} JSON으로 돌려줘라.';
+    try{
+      const raw = await callGemini({
+        systemInstruction: { parts:[{ text: ALL_BRIEF }] },
+        contents: [{ role:"user", parts:[{ text: prompt }] }],
+        generationConfig: { temperature:0.8, maxOutputTokens: 2400, responseMimeType:"application/json" }
+      });
+      return parsePlan(raw);
+    }catch(e){
+      if (e && (e.fatal || e.status === 401 || e.status === 403 || e.status === 429)) throw e;
+      const single = await askOne("nari", text);
+      return [{ sender:"nari", text: single }];
+    }
   }
 
   function parsePlan(raw){
@@ -835,7 +830,7 @@
   async function insertBotRows(room, rows){
     let added = 0;
     for (let i = 0; i < rows.length; i++){
-      if (i > 0) await sleep(480);
+      if (i > 0) await sleep(120);
       try{
         const saved = await OfficeDB.insertMessage({
           room: room, sender: rows[i].sender, role: "assistant", text: rows[i].text
