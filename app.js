@@ -885,7 +885,7 @@
     const inp = $("#geminiKey");
     const v = inp ? String(inp.value || "").trim() : "";
     if (!v){ toast(aiKey() ? "이미 키가 저장되어 있습니다 · 바꿀 때만 입력하세요" : "Gemini API 키를 넣어 주세요"); return; }
-    if (!/^AIza[0-9A-Za-z_\-]{20,}$/.test(v)){ toast("키 형식이 아닙니다 · AIza로 시작하는 키를 넣어 주세요"); return; }
+    if (!/^(AIza|AQ\.)[0-9A-Za-z_\-\.]{20,}$/.test(v)){ toast("키 형식이 올바르지 않습니다 · AIza 또는 AQ. 키를 넣어 주세요"); return; }
     try{
       localStorage.setItem(AI_KEY_LS, v);
       localStorage.setItem(AI_ON_LS, "1");
@@ -901,7 +901,7 @@
     if (!confirm("이 기기에 저장한 Gemini 키를 지울까요?\n지워도 공용 DB의 대화는 그대로 남습니다.")) return;
     try{ localStorage.removeItem(AI_KEY_LS); localStorage.setItem(AI_ON_LS, "0"); }catch(e){}
     const inp = $("#geminiKey");
-    if (inp){ inp.value = ""; inp.placeholder = "AIza... (Google AI Studio에서 무료 발급)"; }
+    if (inp){ inp.value = ""; inp.placeholder = "AIza... 또는 AQ... (Google AI Studio 발급)"; }
     renderAiState();
     toast("키를 지웠습니다 · 서버(5분) 답변으로 돌아갑니다");
   });
@@ -910,7 +910,7 @@
   if (aiTestEl) aiTestEl.addEventListener("click", async () => {
     const inp = $("#geminiKey");
     const typed = inp ? String(inp.value || "").trim() : "";
-    if (typed && !/^AIza[0-9A-Za-z_\-]{20,}$/.test(typed)){ toast("키 형식이 아닙니다 · AIza로 시작하는 키를 넣어 주세요"); return; }
+    if (typed && !/^(AIza|AQ\.)[0-9A-Za-z_\-\.]{20,}$/.test(typed)){ toast("키 형식이 올바르지 않습니다 · AIza 또는 AQ. 키를 넣어 주세요"); return; }
     if (!typed && !aiKey()){ toast("먼저 키를 저장해 주세요"); return; }
     const label = aiTestEl.textContent;
     aiTestEl.disabled = true;
@@ -1179,7 +1179,7 @@
     const gk = $("#geminiKey");
     if (gk){
       gk.value = "";
-      gk.placeholder = aiKey() ? "저장된 키를 쓰는 중 · 바꿀 때만 입력" : "AIza... (Google AI Studio에서 무료 발급)";
+      gk.placeholder = aiKey() ? "저장된 키를 쓰는 중 · 바꿀 때만 입력" : "AIza... 또는 AQ... (Google AI Studio 발급)";
     }
     renderAiState();
     renderStatus();
