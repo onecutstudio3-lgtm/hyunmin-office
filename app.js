@@ -312,9 +312,7 @@
     const badge = $("#dbBadge");
     if (badge){ badge.textContent = txt; badge.className = "v " + (ok ? "ok" : "warn"); }
     const note = $("#dbNote");
-    if (note) note.textContent = ok
-      ? "메시지는 공용 DB에 저장됩니다 · " + (OfficeDB.mode === "realtime" ? "나리·달이와 실시간" : "5초마다 동기화")
-      : "연결 대기 중 · 보낸 내용은 이 기기에 보관했다가 연결되면 올립니다";
+    if (note) note.textContent = ok ? "메시지는 공용 DB에 저장됩니다" : "연결을 기다리는 중 · 보낸 글은 이 기기에 보관됩니다";
     const dbState = $("#dbState");
     if (dbState){ dbState.textContent = txt; dbState.className = "v " + (ok ? "ok" : "warn"); }
     const sheetState = $("#sheetDbState");
