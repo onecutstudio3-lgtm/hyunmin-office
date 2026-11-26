@@ -120,6 +120,9 @@
   .room-meta{display:flex; align-items:center; justify-content:space-between; margin:14px 2px 6px;}
   .room-meta .l{font-size:12px; color:var(--muted); font-weight:600;}
   .on-badge{font-size:11px; font-weight:800; color:var(--green); background:var(--green-soft); border-radius:999px; padding:3px 9px;}
+  .room-rule{margin:8px 2px 4px; padding:10px 12px; border-radius:14px; background:#FDF6EC; border:1px dashed #E8D2B8; font-size:12px; line-height:1.55; color:#6B5645;}
+  .room-rule b{color:#3B2C21;}
+  .room-rule .steps{display:block; margin-top:2px;}
 
   .chat{max-height:54vh; overflow-y:auto; padding:6px 2px 2px; scroll-behavior:smooth;}
   .chat::-webkit-scrollbar{width:0;}
@@ -513,6 +516,11 @@
         <div class="l" id="roomTitle">🏛️ 대회의실 · 전원</div>
         <div class="on-badge" id="roomOn">ON 4명</div>
       </div>
+      <!-- 대회의실 3단계 협의 규칙 (대회의실에서만 보임) -->
+      <div class="room-rule" id="roomRule" role="note" aria-label="대회의실 3단계 협의 규칙">
+        <b>📌 대회의실 3단계 협의 규칙</b>
+        <span class="steps">대장님이 지시하면 ① 1차: 각자 맡은 영역 관점 1개씩만 짧게 제시(중복 금지) · ② 2차: 서로 빠진 조건·리스크 교차 보완 · ③ 최종: 1명이 합의된 최적 결론 1안만 <b>[최종 결론]</b>으로 보고</span>
+      </div>
       <div class="chat" id="chat"></div>
       <div class="composer">
         <button class="plus" id="plusBtn" aria-label="첨부">+</button>
@@ -839,6 +847,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="./app.js?v=5"></script>
+<script src="./app.js?v=6"></script>
 </body>
 </html>

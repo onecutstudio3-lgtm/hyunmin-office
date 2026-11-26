@@ -489,6 +489,8 @@
     if (tn) tn.textContent = meta.title || (roomTabLabel(meta) + " · 1:1");
     const on = $("#roomOn");
     if (on) on.textContent = meta.on || (bot ? bot.name + " 활동 중" : "");
+    const rule = $("#roomRule");
+    if (rule) rule.style.display = (room === "all") ? "" : "none";
     const input = $("#msgInput");
     if (input) input.placeholder = (room === "all")
       ? "대장님, 지시를 한 줄로 (@all = 전원)"
