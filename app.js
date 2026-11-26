@@ -416,7 +416,6 @@
     chat.innerHTML = "";
     if (!shown.length){
       chat.innerHTML = '<div class="empty">아직 대화가 없습니다<br>아래에 한 줄 지시를 남겨보세요</div>';
-      return;
     }
     shown.forEach(m => {
       const kind = msgKind(m);
@@ -447,6 +446,7 @@
       }
       chat.appendChild(el);
     });
+    renderAiLive(chat);          // 즉시 답변 로딩 · 오류 안내(DB에 남기지 않음)
     scrollChat();
   }
   function scrollChat(){
@@ -517,11 +517,13 @@
       text: text
     };
     input.value = "";
+    aiNotice = null;                       // 지난 오류 안내는 새 지시와 함께 지운다
     try{
       const saved = await OfficeDB.insertMessage(row);
       if (saved && saved.id) upsertMessage(saved);
       else { renderRoom(); }
       toast("보냈습니다 · 공용 DB에 저장됨");
+      queueInstant(row.room, text);        // ⚡ 즉시 채팅이 켜져 있으면 바로 답변 생성
     }catch(e){
       const localId = "local-" + Date.now();
       queuePush(row, localId);
@@ -536,6 +538,400 @@
   });
   $("#plusBtn").addEventListener("click", () => {
     toast("첨부는 다음 버전에서 열립니다 · 지금은 텍스트로 지시해 주세요");
+  });
+
+  /* =========================================================
+     ⚡ 즉시 채팅 — Google Gemini 를 브라우저에서 직접 호출
+     키는 localStorage(hmo_gemini_key)에만 저장 · 코드·저장소에 절대 넣지 않는다
+     ========================================================= */
+  const AI_KEY_LS = "hmo_gemini_key";
+  const AI_ON_LS  = "hmo_instant_ai_enabled";
+  const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
+
+  let aiPending = null;      // { room, text } 답변 준비 중 표시
+  let aiNotice = null;       // { room, text } 오류 안내(DB에 남기지 않음)
+
+  function aiKey(){
+    try{ return String(localStorage.getItem(AI_KEY_LS) || "").trim(); }catch(e){ return ""; }
+  }
+  function aiOn(){
+    try{ return localStorage.getItem(AI_ON_LS) === "1"; }catch(e){ return false; }
+  }
+  function aiReady(){ return !!aiKey() && aiOn(); }
+  function maskKey(k){
+    k = String(k || "");
+    return k.length > 12 ? (k.slice(0,6) + "…" + k.slice(-4)) : "저장됨";
+  }
+
+  const PERSONA = {
+    nari: "너는 '나리'다. 현민님(대장님)의 오른팔 AI 비서. 담당은 B2B 영업 · 원컷스튜디오(숏폼 대행: 릴스·쇼츠 수주) · 콘텐츠 제작 · 메일·콜드메일. 크몽 7종 서비스, 네이버 클립, 스레드, 상담·견적·계약, 건기식(나우코스) 쪽 실행까지 맡는다.",
+    dali: "너는 '달이'다. 담당은 블로그 · 체험단 · 그립 · 고단가 리서치, 당근 비즈프로필과 스마트스토어 운영. 네이버 상위노출·키워드·후기형 콘텐츠에 강하다.",
+    keyring: "너는 '제이'다. 담당은 지시 기록 · 보고 정리, 그리고 앱테크·최저가 비교. 흩어진 지시를 표로 정리하고, 돈 되는 작은 절약과 마진 계산을 숫자로 짚는다.",
+    juno: "너는 '주노'다. 담당은 오피스 앱 · 코드 · 배포, 기술·리스크 검증. 실제로 되는지(권한·한도·비용·약관)를 확인해 함정을 먼저 알린다."
+  };
+
+  const OFFICE_BRIEF = [
+    "대화 상대는 박현민(대장님)이다. 숏폼 영상 기획자이고 원컷스튜디오 사장이며, 네이버 클립·스레드·크몽·콜드메일·블로그로 일한다.",
+    "말투: 반말, '대장님' 호칭. 짧고 실무적으로. 마크다운 기호(#, **, 표) 쓰지 말고 줄바꿈과 '·'로만 정리한다.",
+    "과장하지 않는다. 모르는 것은 모른다고 말하고, 확인이 필요한 것은 마지막 한 줄로 묻는다.",
+    "돈이 나가는 일·다른 사람에게 나가는 일은 네가 임의로 결정하지 말고 대장님 확인을 받으라고 안내한다."
+  ].join("\n");
+
+  const ALL_BRIEF = [
+    OFFICE_BRIEF,
+    "",
+    "지금은 '대회의실'이다. 나리·달이·제이·주노 네 명이 한 번에 협의한다.",
+    "나리: B2B·원컷스튜디오·콘텐츠·메일 / 달이: 블로그·체험단·당근·고단가 리서치 / 제이: 지시 기록·보고 정리·앱테크·최저가 / 주노: 오피스·코드·배포·기술 리스크 검증.",
+    "답변은 아래 3단계를 모두 담아 messages 배열로 만든다.",
+    "1) 1차: 지시와 관련된 2~4명이 각자 영역 관점에서 1~2줄. 같은 말 반복 금지.",
+    "2) 2차: 서로 빠진 조건·리스크·비용을 1~2명이 1줄씩 교차 보완.",
+    "3) 최종: 가장 관련 깊은 1명이 '[최종 결론]'으로 시작하는 1안 요약 2~4줄(바로 실행할 순서 포함).",
+    "각 text는 200자 이내, 반말. 모두 4~6개 메시지로 끝낸다. 인사말·이름 반복은 넣지 않는다."
+  ].join("\n");
+
+  function setAiPending(room, t){ aiPending = t ? { room:room, text:t } : null; renderRoom(); }
+  function setAiNotice(room, t){ aiNotice = t ? { room:room, text:t } : null; renderRoom(); }
+
+  function renderAiLive(chat){
+    if (aiNotice && aiNotice.room === currentRoom){
+      const box = document.createElement("div");
+      box.className = "ai-notice";
+      box.innerHTML = '<span class="nt"></span><button class="nx" type="button" aria-label="안내 닫기">✕</button>';
+      box.querySelector(".nt").textContent = aiNotice.text;
+      box.querySelector(".nx").addEventListener("click", () => { aiNotice = null; renderRoom(); });
+      chat.appendChild(box);
+    }
+    if (aiPending && aiPending.room === currentRoom){
+      const el = document.createElement("div");
+      el.className = "ai-typing";
+      el.innerHTML = '<span class="tt"></span><span class="dots"><i></i><i></i><i></i></span>';
+      el.querySelector(".tt").textContent = aiPending.text;
+      chat.appendChild(el);
+    }
+  }
+
+  function renderAiState(){
+    const key = aiKey();
+    const on = !!key && aiOn();
+    const chip = $("#aiPillChip"), pill = $("#serverPill");
+    if (chip) chip.textContent = on ? "⚡ 즉시" : "서버";
+    if (pill){
+      pill.classList.toggle("live", on);
+      pill.setAttribute("aria-label", on ? "AI 설정 · 즉시 채팅 켜짐" : "AI 설정 · 즉시 채팅 꺼짐");
+    }
+    const badge = $("#instantBadge");
+    if (badge){
+      badge.textContent = on ? "⚡ 즉시 채팅 ON" : "서버(5분)";
+      badge.className = "instant-badge" + (on ? " on" : "");
+    }
+    const tg = $("#aiToggle");
+    if (tg) tg.setAttribute("aria-checked", String(on));
+    const st = $("#aiKeyState");
+    if (st) st.textContent = key ? ("저장됨 · " + maskKey(key)) : "키 없음";
+  }
+
+  async function fetchWithTimeout(url, opts, ms){
+    const ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+    let timer = null;
+    if (ctl && ms) timer = setTimeout(() => { try{ ctl.abort(); }catch(e){} }, ms);
+    try{
+      return await fetch(url, Object.assign({ cache:"no-store" }, opts || {}, ctl ? { signal:ctl.signal } : {}));
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  function aiErr(code, msg){ const e = new Error(msg || code); e.code = code; return e; }
+
+  /* Gemini REST 호출: 2.5-flash(빠른 모드) → 2.5-flash → 2.0-flash 순서로 폴백 */
+  async function callGemini(body){
+    const key = aiKey();
+    if (!key) throw aiErr("NO_KEY", "Gemini 키 없음");
+    const attempts = [
+      { model:"gemini-2.5-flash", thinkBudget:0 },
+      { model:"gemini-2.5-flash", thinkBudget:null },
+      { model:"gemini-2.0-flash", thinkBudget:null }
+    ];
+    let last = null;
+    let dropSchema = false;
+    for (let i = 0; i < attempts.length; i++){
+      const a = attempts[i];
+      const payload = JSON.parse(JSON.stringify(body));
+      const gc = payload.generationConfig || (payload.generationConfig = {});
+      if (a.thinkBudget === 0){ gc.thinkingConfig = { thinkingBudget:0 }; }
+      if (dropSchema){ delete gc.responseSchema; }
+      try{
+        const res = await fetchWithTimeout(
+          GEMINI_BASE + a.model + ":generateContent?key=" + encodeURIComponent(key),
+          { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) },
+          60000
+        );
+        const data = await res.json().catch(() => null);
+        if (!res.ok){
+          const er = (data && data.error) || {};
+          const reasons = (er.details || []).map(d => d && d.reason).filter(Boolean);
+          const e = new Error(er.message || ("HTTP " + res.status));
+          e.status = res.status;
+          e.reason = reasons[0] || er.status || "";
+          if (res.status === 400 && /API_KEY/i.test(String(e.reason) + " " + String(e.message))) e.fatal = true;
+          if (res.status === 401 || res.status === 403) e.fatal = true;
+          if (res.status === 400 && gc.responseSchema) dropSchema = true;   // 스키마 미지원이면 형식만 빼고 재시도
+          throw e;
+        }
+        const cand = (data && data.candidates && data.candidates[0]) || null;
+        const parts = (cand && cand.content && cand.content.parts) || [];
+        const text = parts.map(p => (p && p.text) || "").join("").trim();
+        if (!text){
+          const e = new Error("빈 응답" + ((cand && cand.finishReason) ? " (" + cand.finishReason + ")" : ""));
+          e.status = 0;
+          e.reason = (cand && cand.finishReason) || "EMPTY";
+          throw e;
+        }
+        return text;
+      }catch(e){
+        last = e;
+        if (e && e.fatal) throw e;
+      }
+    }
+    throw last || new Error("Gemini 호출 실패");
+  }
+
+  function aiErrorMessage(e){
+    const s = (e && e.status) || 0;
+    const r = String((e && e.reason) || "");
+    const m = String((e && e.message) || "");
+    if (e && e.code === "NO_KEY") return "Gemini 키가 없습니다 · ⚙️ AI에서 키를 먼저 저장해 주세요.";
+    if (e && e.code === "FORMAT") return "답변 형식을 읽지 못했습니다 · 한 번 더 보내 주세요.";
+    if (s === 400 && /API_KEY/i.test(r)) return "Gemini 키가 올바르지 않습니다 · ⚙️ AI에서 키를 다시 확인해 주세요.";
+    if (s === 401 || s === 403) return "이 키로는 Gemini를 쓸 수 없습니다 · Google AI Studio에서 키 상태를 확인해 주세요.";
+    if (s === 429) return "Gemini 무료 한도를 넘었습니다 · 잠시 뒤 다시 보내거나 5분 서버 답변을 기다려 주세요.";
+    if (s === 404) return "Gemini 모델을 찾지 못했습니다 · 조금 뒤 다시 시도해 주세요.";
+    if (s >= 500) return "Gemini 서버가 잠시 불안정합니다 · 조금 뒤 다시 시도해 주세요.";
+    if (/abort|timeout/i.test(m)) return "응답이 너무 늦습니다(60초) · 다시 보내 주세요.";
+    if (/Failed to fetch|NetworkError|Load failed|ERR_/i.test(m)) return "구글에 연결하지 못했습니다 · 인터넷 연결을 확인해 주세요.";
+    if (/빈 응답/.test(m)) return "Gemini가 빈 답변을 돌려줬습니다 · 한 번 더 보내 주세요. (" + (r || "EMPTY") + ")";
+    return "즉시 답변을 만들지 못했습니다 · " + (m || "알 수 없는 오류");
+  }
+
+  /* 최근 대화 10건을 프롬프트용 한 덩어리로 */
+  function transcript(room, limit){
+    return messages
+      .filter(m => (m.room || "all") === room)
+      .slice(-(limit || 10))
+      .map(m => {
+        const who = (m.sender === "user") ? "대장님" : botMeta(m.sender).name;
+        return who + ": " + String(m.text || "").replace(/\s+/g, " ").trim();
+      })
+      .join("\n");
+  }
+
+  async function askOne(room, text){
+    const bot = BOTS[room];
+    if (!bot) throw aiErr("NO_ROOM", "1:1 방이 아닙니다");
+    const system = PERSONA[room] + "\n\n" + OFFICE_BRIEF +
+      "\n\n지금은 '" + bot.name + "' 1:1 방이다. 아래 대화록을 읽고 대장님의 마지막 지시에 너(" + bot.name + ")로서 답한다." +
+      " 바로 쓸 수 있는 순서·문장으로 2~5줄. 첫머리에 네 이름을 다시 붙이지 않는다. 실행이 필요하면 '내가 지금 할 수 있는 것'과 '대장님이 해줄 것'을 구분해 적는다.";
+    const prompt = "[대화록 · " + bot.name + " 방 · 최근]\n" + transcript(room, 10) +
+      "\n\n[이번 지시]\n" + text + "\n\n위 지시에 답해라.";
+    return await callGemini({
+      systemInstruction: { parts:[{ text: system }] },
+      contents: [{ role:"user", parts:[{ text: prompt }] }],
+      generationConfig: { temperature:0.85, maxOutputTokens: 1200 }
+    });
+  }
+
+  async function askAll(text){
+    const schema = {
+      type: "OBJECT",
+      properties: {
+        messages: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              sender: { type:"STRING", enum:["nari","dali","keyring","juno"] },
+              text: { type:"STRING" }
+            },
+            required: ["sender","text"]
+          }
+        }
+      },
+      required: ["messages"]
+    };
+    const prompt = "[대회의실 대화록 · 최근 10건]\n" + transcript("all", 10) +
+      "\n\n[대장님 지시]\n" + text +
+      "\n\n위 지시로 3단계 협의(1차 의견 → 2차 보완 → [최종 결론])를 만들어 messages로 돌려줘라.";
+    const raw = await callGemini({
+      systemInstruction: { parts:[{ text: ALL_BRIEF }] },
+      contents: [{ role:"user", parts:[{ text: prompt }] }],
+      generationConfig: { temperature:0.9, maxOutputTokens: 1600, responseMimeType:"application/json", responseSchema: schema }
+    });
+    return parsePlan(raw);
+  }
+
+  function parsePlan(raw){
+    let txt = String(raw || "").trim();
+    txt = txt.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    let data = null;
+    try{ data = JSON.parse(txt); }
+    catch(e){
+      const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
+      if (a >= 0 && b > a){ try{ data = JSON.parse(txt.slice(a, b + 1)); }catch(e2){} }
+    }
+    const list = (data && Array.isArray(data.messages)) ? data.messages : (Array.isArray(data) ? data : []);
+    const out = [];
+    list.forEach(it => {
+      if (!it) return;
+      const rawSender = String(it.sender || "").trim().toLowerCase();
+      const body = String(it.text || "").trim();
+      if (!body) return;
+      let sender = BOTS[rawSender] ? rawSender : null;
+      if (!sender){
+        if (/나리/.test(rawSender)) sender = "nari";
+        else if (/달이/.test(rawSender)) sender = "dali";
+        else if (/제이|키링/.test(rawSender)) sender = "keyring";
+        else if (/주노/.test(rawSender)) sender = "juno";
+      }
+      out.push({ sender: sender || "nari", text: body });
+    });
+    if (!out.length) throw aiErr("FORMAT", "협의 형식을 읽지 못했습니다");
+    return out.slice(0, 8);
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  /* 답변을 messages 에 0.5초 간격으로 차례로 올린다(채팅처럼 보이게) */
+  async function insertBotRows(room, rows){
+    let added = 0;
+    for (let i = 0; i < rows.length; i++){
+      if (i > 0) await sleep(480);
+      try{
+        const saved = await OfficeDB.insertMessage({
+          room: room, sender: rows[i].sender, role: "assistant", text: rows[i].text
+        });
+        if (saved && saved.id) upsertMessage(saved);
+        else renderRoom();
+        added++;
+      }catch(e){
+        if (added) toast("일부 답변만 저장했습니다 · " + (e.message || "오류"));
+        else toast("답변을 공용 DB에 저장하지 못했습니다 · " + (e.message || "오류"));
+        break;
+      }
+    }
+    return added;
+  }
+
+  let aiBusy = false;
+  const aiQueue = [];
+
+  function queueInstant(room, text){
+    if (!aiReady()) return false;                 // 꺼져 있으면 기존 5분 서버 흐름 그대로
+    if (!BOTS[room] && room !== "all") return false;
+    aiQueue.push({ room: room, text: text });
+    drainAiQueue();
+    return true;
+  }
+
+  async function drainAiQueue(){
+    if (aiBusy) return;
+    aiBusy = true;
+    try{
+      while (aiQueue.length){
+        const job = aiQueue.shift();
+        await runInstant(job.room, job.text);
+      }
+    } finally {
+      aiBusy = false;
+    }
+  }
+
+  async function runInstant(room, text){
+    const isAll = room === "all";
+    const who = isAll ? "4명" : (BOTS[room] ? BOTS[room].name : "AI");
+    aiNotice = null;
+    setAiPending(room, isAll ? "🤖 4명이 실시간 논의 중…" : "🤖 " + who + "가 답을 쓰는 중…");
+    try{
+      let rows = null;
+      if (isAll) rows = await askAll(text);
+      else rows = [{ sender: room, text: await askOne(room, text) }];
+
+      if (isAll) setAiPending(room, "🤖 4명이 답을 올리는 중…");
+      else setAiPending(room, null);
+
+      const n = await insertBotRows(room, rows);
+      setAiPending(room, null);
+      if (n) toast(isAll ? ("대회의실 답변 " + n + "개 도착 · " + nowTime()) : (who + " 즉시 답변 · " + nowTime()));
+    }catch(e){
+      try{ console.warn("[instant-ai]", e); }catch(err){}
+      setAiPending(room, null);
+      const msg = aiErrorMessage(e);
+      setAiNotice(room, "⚠️ " + msg);
+      toast(msg);
+    }
+  }
+
+  /* ---------- 설정 시트: Gemini 키 저장/삭제 · 즉시 채팅 토글 ---------- */
+  const aiToggleEl = $("#aiToggle");
+  if (aiToggleEl) aiToggleEl.addEventListener("click", () => {
+    if (!aiKey()){ toast("먼저 Gemini 키를 저장해 주세요"); return; }
+    const next = !aiOn();
+    try{ localStorage.setItem(AI_ON_LS, next ? "1" : "0"); }catch(e){ toast("설정을 저장하지 못했습니다"); return; }
+    renderAiState();
+    toast(next ? "⚡ 즉시 채팅 ON · 이제 보내면 바로 답합니다" : "즉시 채팅 OFF · 5분 서버 답변으로 돌아갑니다");
+  });
+
+  const geminiSaveEl = $("#geminiSave");
+  if (geminiSaveEl) geminiSaveEl.addEventListener("click", () => {
+    const inp = $("#geminiKey");
+    const v = inp ? String(inp.value || "").trim() : "";
+    if (!v){ toast(aiKey() ? "이미 키가 저장되어 있습니다 · 바꿀 때만 입력하세요" : "Gemini API 키를 넣어 주세요"); return; }
+    if (!/^AIza[0-9A-Za-z_\-]{20,}$/.test(v)){ toast("키 형식이 아닙니다 · AIza로 시작하는 키를 넣어 주세요"); return; }
+    try{
+      localStorage.setItem(AI_KEY_LS, v);
+      localStorage.setItem(AI_ON_LS, "1");
+    }catch(e){ toast("이 기기에 저장하지 못했습니다 · 저장 공간을 확인해 주세요"); return; }
+    if (inp){ inp.value = ""; inp.placeholder = "저장된 키를 쓰는 중 · 바꿀 때만 입력"; }
+    renderAiState();
+    toast("키를 이 기기에 저장했습니다 · 즉시 채팅 ON");
+  });
+
+  const geminiClearEl = $("#geminiClear");
+  if (geminiClearEl) geminiClearEl.addEventListener("click", () => {
+    if (!aiKey()){ toast("저장된 키가 없습니다"); return; }
+    if (!confirm("이 기기에 저장한 Gemini 키를 지울까요?\n지워도 공용 DB의 대화는 그대로 남습니다.")) return;
+    try{ localStorage.removeItem(AI_KEY_LS); localStorage.setItem(AI_ON_LS, "0"); }catch(e){}
+    const inp = $("#geminiKey");
+    if (inp){ inp.value = ""; inp.placeholder = "AIza... (Google AI Studio에서 무료 발급)"; }
+    renderAiState();
+    toast("키를 지웠습니다 · 서버(5분) 답변으로 돌아갑니다");
+  });
+
+  const aiTestEl = $("#aiTest");
+  if (aiTestEl) aiTestEl.addEventListener("click", async () => {
+    const inp = $("#geminiKey");
+    const typed = inp ? String(inp.value || "").trim() : "";
+    if (typed && !/^AIza[0-9A-Za-z_\-]{20,}$/.test(typed)){ toast("키 형식이 아닙니다 · AIza로 시작하는 키를 넣어 주세요"); return; }
+    if (!typed && !aiKey()){ toast("먼저 키를 저장해 주세요"); return; }
+    const label = aiTestEl.textContent;
+    aiTestEl.disabled = true;
+    aiTestEl.textContent = "확인 중…";
+    const oldKey = aiKey();
+    try{
+      if (typed) localStorage.setItem(AI_KEY_LS, typed);   // 저장 전에 임시로 써 보고
+      const t = await callGemini({
+        contents: [{ role:"user", parts:[{ text:"핑. '연결됨'이라고만 답해." }] }],
+        generationConfig: { temperature:0, maxOutputTokens: 24 }
+      });
+      toast("✅ Gemini 연결됨 · " + String(t).replace(/\s+/g, " ").slice(0, 40));
+    }catch(e){
+      if (typed && !oldKey){ try{ localStorage.removeItem(AI_KEY_LS); }catch(err){} }
+      if (typed && oldKey){ try{ localStorage.setItem(AI_KEY_LS, oldKey); }catch(err){} }
+      toast("❌ " + aiErrorMessage(e));
+    } finally {
+      aiTestEl.disabled = false;
+      aiTestEl.textContent = label;
+      renderAiState();
+    }
   });
 
   /* ---------- 캘린더 ---------- */
@@ -780,6 +1176,12 @@
     const cfg = load(LS.cfg, {});
     $("#sbUrl").value = cfg.supabaseUrl || SUPABASE_URL;
     $("#sbKey").value = cfg.supabaseKey || SUPABASE_ANON_KEY;
+    const gk = $("#geminiKey");
+    if (gk){
+      gk.value = "";
+      gk.placeholder = aiKey() ? "저장된 키를 쓰는 중 · 바꿀 때만 입력" : "AIza... (Google AI Studio에서 무료 발급)";
+    }
+    renderAiState();
     renderStatus();
     scrim.classList.add("on"); sheet.classList.add("on");
     sheet.setAttribute("aria-hidden", "false");
@@ -960,7 +1362,7 @@
 
     buildSubtabs(); selectRoom(currentRoom);
     renderBots(); renderNow();
-    renderRoom(); renderMemos(); renderTimeline(); renderStatus();
+    renderRoom(); renderMemos(); renderTimeline(); renderStatus(); renderAiState();
     tickClock(); applyMovePref();
     setProgOpen(!!load(LS.ui, {}).progOpen);
     // 맵 개편 첫 실행에는 본부 오피스를 먼저 보여준다 (한 번만)

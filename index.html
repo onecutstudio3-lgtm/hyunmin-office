@@ -65,6 +65,8 @@
   }
   .server-pill .gear{font-size:12px; filter:grayscale(.15);}
   .server-pill .chip{background:#E9F2EE; color:#4B7565; border-radius:999px; padding:3px 9px; font-size:11.5px; font-weight:700;}
+  .server-pill.live{border-color:#F5D5B2; background:#FFF8F0; color:#B25408;}
+  .server-pill.live .chip{background:#FFE6C7; color:#A94C05;}
   .icon-btn{
     width:40px; height:40px; flex:none; border-radius:50%; background:#fff;
     border:1.5px solid var(--line); display:grid; place-items:center;
@@ -123,6 +125,18 @@
   .room-rule{margin:8px 2px 4px; padding:10px 12px; border-radius:14px; background:#FDF6EC; border:1px dashed #E8D2B8; font-size:12px; line-height:1.55; color:#6B5645;}
   .room-rule b{color:#3B2C21;}
   .room-rule .steps{display:block; margin-top:2px;}
+  .room-meta .rm-right{display:flex; align-items:center; gap:6px; flex:none;}
+  .instant-badge{font-size:10.5px; font-weight:800; color:#9C8A7A; background:#F4ECE2; border-radius:999px; padding:3px 8px; white-space:nowrap;}
+  .instant-badge.on{color:#A94C05; background:#FFE6C7;}
+  .ai-typing{display:flex; align-items:center; gap:7px; margin:10px 4px 6px; color:#8B7360; font-size:12px; font-weight:700;}
+  .ai-typing .dots{display:inline-flex; gap:3px;}
+  .ai-typing .dots i{width:5px; height:5px; border-radius:50%; background:#C9AE92; animation:aib 1s infinite;}
+  .ai-typing .dots i:nth-child(2){animation-delay:.15s;}
+  .ai-typing .dots i:nth-child(3){animation-delay:.3s;}
+  @keyframes aib{0%,60%,100%{opacity:.25; transform:translateY(0);} 30%{opacity:1; transform:translateY(-2px);}}
+  .ai-notice{display:flex; gap:8px; align-items:flex-start; margin:10px 2px 4px; padding:10px 12px; border-radius:14px; background:#FDF0EC; border:1px solid #F3D9CF; color:#A24A2E; font-size:12px; font-weight:600; line-height:1.5;}
+  .ai-notice .nt{flex:1; min-width:0;}
+  .ai-notice .nx{flex:none; color:#B4634A; font-size:12px; font-weight:800; padding:0 2px;}
 
   .chat{max-height:54vh; overflow-y:auto; padding:6px 2px 2px; scroll-behavior:smooth;}
   .chat::-webkit-scrollbar{width:0;}
@@ -461,6 +475,14 @@
   .btn.primary{background:var(--brown); color:#fff;}
   .btn.ghost{background:#fff; border:1.5px solid var(--line); color:#7A6552;}
   .btn.danger{background:#FDF0EC; color:#C05B3B; border:1.5px solid #F3D9CF;}
+  .ai-set{margin-top:16px; padding-top:12px; border-top:1px dashed #E8D2B8;}
+  .ai-set .set-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px;}
+  .ai-set .set-head h4{margin:0; font-size:13.5px; font-weight:800; color:#3B2C21;}
+  .ai-set .set-head span{font-size:10.5px; font-weight:800; color:#A94C05; background:#FFE6C7; border-radius:999px; padding:2px 8px;}
+  .ai-set .note{font-size:11px; color:#B29A83; font-weight:600; line-height:1.55; margin:6px 0 0;}
+  .ai-set .mini{display:flex; gap:8px; margin-top:8px;}
+  .ai-set .mini .btn{height:40px; font-size:12px; border-radius:12px;}
+  .ai-set .keyline{font-size:11px; color:var(--muted); font-weight:700; margin:2px 0 8px;}
 
   .toast{
     position:fixed; left:50%; bottom:96px; transform:translate(-50%,12px); z-index:120;
@@ -491,7 +513,7 @@
       <div class="sub"><span class="dot" id="syncDot"></span>현민님 전용 · <span id="todayText">오늘</span></div>
     </div>
     <div class="server-pill" id="serverPill" role="button" tabindex="0" aria-label="AI 서버 설정">
-      <span class="gear">⚙️</span>AI <span class="chip">서버</span>
+      <span class="gear">⚙️</span>AI <span class="chip" id="aiPillChip">서버</span>
     </div>
     <button class="icon-btn" id="refreshBtn" aria-label="새로고침">↻</button>
   </header>
@@ -514,7 +536,10 @@
       </div>
       <div class="room-meta">
         <div class="l" id="roomTitle">🏛️ 대회의실 · 전원</div>
-        <div class="on-badge" id="roomOn">ON 4명</div>
+        <div class="rm-right">
+          <span class="instant-badge" id="instantBadge">서버(5분)</span>
+          <div class="on-badge" id="roomOn">ON 4명</div>
+        </div>
       </div>
       <!-- 대회의실 3단계 협의 규칙 (대회의실에서만 보임) -->
       <div class="room-rule" id="roomRule" role="note" aria-label="대회의실 3단계 협의 규칙">
@@ -840,13 +865,41 @@
     <button class="btn ghost" id="sheetClose">닫기</button>
     <button class="btn primary" id="saveDb">저장</button>
   </div>
-  <div class="btn-row" style="margin-top:8px">
+  <!-- ⚡ 즉시 채팅 (Google Gemini · 키는 이 브라우저에만 저장) -->
+  <div class="ai-set">
+    <div class="set-head">
+      <h4>⚡ 즉시 채팅 (Gemini)</h4>
+      <span id="aiKeyState">키 없음</span>
+    </div>
+    <div class="sw" style="border-bottom:0; padding-top:4px; padding-bottom:8px">
+      <div class="txt">
+        <div class="t">즉시 채팅</div>
+        <div class="d">켜면 보내는 순간 나리·달이·제이·주노가 바로 답합니다</div>
+      </div>
+      <button class="toggle" id="aiToggle" role="switch" aria-checked="false" aria-label="즉시 채팅 켜기"></button>
+    </div>
+    <div class="field">
+      <label for="geminiKey">Google Gemini API 키 (AIza…)</label>
+      <input id="geminiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza... (Google AI Studio에서 무료 발급)">
+    </div>
+    <div class="mini">
+      <button class="btn ghost" id="geminiClear">키 삭제</button>
+      <button class="btn ghost" id="aiTest">연결 테스트</button>
+      <button class="btn primary" id="geminiSave">키 저장</button>
+    </div>
+    <p class="note">
+      키는 <b>이 브라우저(localStorage)에만</b> 저장되고 GitHub·서버로 올라가지 않습니다. 폰과 PC는 저장 공간이 따로라 각각 넣어야 합니다.<br>
+      즉시 답변이 달린 글에는 5분 감시 피클이 나중에 한 번 더 답할 수 있습니다. 실제 실행이 필요하면 피클 채팅에서 따로 요청하세요.
+    </p>
+  </div>
+
+  <div class="btn-row" style="margin-top:14px">
     <button class="btn danger" id="resetAll">이 기기 데이터 초기화</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="./app.js?v=6"></script>
+<script src="./app.js?v=7"></script>
 </body>
 </html>
