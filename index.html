@@ -569,7 +569,7 @@
 </nav>
 
 <div class="scrim" id="scrim"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="AI 서버 설정">
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="AI 서버 설정" aria-hidden="true">
   <div class="grab"></div>
   <h3>⚙️ AI 서버 설정</h3>
   <p class="lead">지금은 이 기기에만 저장되는 1차 버전입니다. 아래에 Supabase 프로젝트를 넣으면 같은 오피스를 폰과 PC에서 함께 쓸 수 있게 됩니다. (실시간 동기화는 2차 버전에서 연결)</p>
@@ -875,8 +875,9 @@
     $('#sbKey').value = cfg.supabaseKey || "";
     $('#sheetDbState').textContent = (cfg.supabaseUrl && cfg.supabaseKey) ? "설정됨 (실시간은 2차)" : "로컬 저장 (이 기기)";
     scrim.classList.add("on"); sheet.classList.add("on");
+    sheet.setAttribute("aria-hidden", "false");
   }
-  function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); }
+  function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); sheet.setAttribute("aria-hidden", "true"); }
   $('#serverPill').addEventListener("click", openSheet);
   $('#serverPill').addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") openSheet(); });
   $('#openSettings2').addEventListener("click", openSheet);

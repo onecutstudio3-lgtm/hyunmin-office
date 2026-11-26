@@ -32,3 +32,8 @@
 | manifest.json | 앱 이름·아이콘·standalone 설정 |
 | sw.js | 오프라인 캐시 (문서는 네트워크 우선) |
 | icon*.png / icon.svg | 홈 화면 아이콘 |
+
+## 배포 방법
+
+GitHub Pages가 이 저장소에서 `gh-pages / (root)`로 설정되어 있습니다(계정 권한상 저장소 설정을 API로 바꾸지 못해, `gh-pages` 푸시로 Pages가 켜졌습니다).
+수정 후에는 `./deploy.sh` — `main`을 올리고 `gh-pages`를 `main`에 맞춰 밀어 올립니다.
