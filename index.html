@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>박현민 AI 오피스</title>
+<meta name="description" content="현민님 전용 AI 오피스 — 나리·달이와 한 곳에서 지시하고 확인하는 모바일 앱">
+<meta name="theme-color" content="#FAF7F2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="현민 오피스">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  :root{
+    --cream:#FAF7F2; --cream-2:#F4EDE3; --card:#FFFFFF;
+    --ink:#3B2C21; --ink-2:#5A4736; --muted:#9C8A7A; --line:#EFE3D3;
+    --brown:#8B5A2B; --brown-d:#74481F; --brown-l:#B98B57;
+    --beige:#FBF4EA; --beige-2:#F6ECDD;
+    --orange:#EE8A3C; --orange-soft:#FDEEE0;
+    --blue:#5E9EDC; --blue-soft:#E8F2FC;
+    --green:#3E9C74; --green-soft:#E7F4EE;
+    --shadow:0 6px 22px rgba(120,86,52,.07), 0 1px 2px rgba(120,86,52,.05);
+    --r-card:22px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Noto Sans CJK KR",system-ui,sans-serif;
+    font-size:15px; line-height:1.5; letter-spacing:-.01em;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  button{font-family:inherit; cursor:pointer; border:0; background:none; color:inherit;}
+  input,textarea{font-family:inherit;}
+  .app{max-width:460px; margin:0 auto; padding:14px 12px 108px;}
+
+  /* ---------- header ---------- */
+  .topbar{
+    background:var(--card); border-radius:var(--r-card); box-shadow:var(--shadow);
+    padding:14px 16px; display:flex; align-items:center; gap:12px;
+  }
+  .avatar{
+    width:46px; height:46px; border-radius:50%; flex:none;
+    background:linear-gradient(160deg,#F7E7D2,#EAD2B3);
+    border:2px solid #fff; box-shadow:0 2px 8px rgba(139,90,43,.18);
+    display:grid; place-items:center; overflow:hidden;
+  }
+  .avatar img{width:100%; height:100%; object-fit:cover;}
+  .brand{min-width:0; flex:1;}
+  .brand h1{margin:0; font-size:19px; font-weight:800; letter-spacing:-.03em; color:#33251B;}
+  .brand .sub{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted); margin-top:2px; font-weight:500;}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px var(--green-soft);}
+  .server-pill{
+    display:flex; align-items:center; gap:6px; padding:4px 4px 4px 11px;
+    background:#fff; border:1.5px solid #D9E7E1; border-radius:999px;
+    font-size:12px; font-weight:700; color:#5C7A6E; white-space:nowrap;
+  }
+  .server-pill .gear{font-size:12px; filter:grayscale(.15);}
+  .server-pill .chip{background:#E9F2EE; color:#4B7565; border-radius:999px; padding:3px 9px; font-size:11.5px; font-weight:700;}
+  .icon-btn{
+    width:40px; height:40px; flex:none; border-radius:50%; background:#fff;
+    border:1.5px solid var(--line); display:grid; place-items:center;
+    font-size:16px; color:var(--brown); transition:transform .25s ease, background .2s;
+  }
+  .icon-btn:active{transform:scale(.92); background:#FDF6EC;}
+  .icon-btn.spin{animation:spin .6s ease;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- tab card ---------- */
+  .tabs{
+    background:var(--card); border-radius:var(--r-card); box-shadow:var(--shadow);
+    margin-top:12px; padding:10px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  }
+  .tab{
+    height:42px; border-radius:999px; font-size:13.5px; font-weight:700; color:#6B5645;
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    transition:background .18s, color .18s, transform .12s;
+  }
+  .tab:active{transform:scale(.97);}
+  .tab[aria-selected="true"]{
+    background:var(--brown); color:#fff;
+    box-shadow:0 4px 12px rgba(139,90,43,.28);
+  }
+
+  /* ---------- generic card ---------- */
+  .card{
+    background:var(--card); border-radius:var(--r-card); box-shadow:var(--shadow);
+    padding:16px; margin-top:12px;
+  }
+  .card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;}
+  .card-head h2{margin:0; font-size:14.5px; font-weight:800; letter-spacing:-.02em; color:#3B2C21;}
+  .card-head .hint{font-size:11.5px; color:var(--muted); font-weight:600;}
+  .eyebrow{font-size:11px; font-weight:800; letter-spacing:.06em; color:#B29A83; text-transform:uppercase;}
+
+  /* ---------- room ---------- */
+  .subtabs{
+    background:var(--cream-2); border-radius:999px; padding:4px; display:flex; gap:4px;
+  }
+  .subtab{
+    flex:1; height:38px; border-radius:999px; font-size:13px; font-weight:700; color:#7A6552;
+    display:flex; align-items:center; justify-content:center; gap:5px; transition:all .18s;
+  }
+  .subtab[aria-selected="true"]{background:#fff; color:#3B2C21; box-shadow:0 2px 8px rgba(140,105,70,.13);}
+  .room-meta{display:flex; align-items:center; justify-content:space-between; margin:14px 2px 6px;}
+  .room-meta .l{font-size:12px; color:var(--muted); font-weight:600;}
+  .on-badge{font-size:11px; font-weight:800; color:var(--green); background:var(--green-soft); border-radius:999px; padding:3px 9px;}
+
+  .chat{max-height:54vh; overflow-y:auto; padding:6px 2px 2px; scroll-behavior:smooth;}
+  .chat::-webkit-scrollbar{width:0;}
+  .msg{display:flex; gap:9px; margin-bottom:16px;}
+  .msg .face{
+    width:36px; height:36px; flex:none; border-radius:12px; display:grid; place-items:center;
+    font-size:17px; border:1px solid rgba(0,0,0,.04);
+  }
+  .msg.nari .face{background:var(--orange-soft);}
+  .msg.dali .face{background:var(--blue-soft);}
+  .msg.me{flex-direction:row-reverse;}
+  .msg .body{max-width:78%;}
+  .msg .who{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; color:#4A382B; margin:0 0 5px 2px;}
+  .msg.me .who{justify-content:flex-end; margin-right:2px;}
+  .msg .who time{font-size:11px; font-weight:500; color:#B4A291;}
+  .badge{font-size:9.5px; font-weight:800; padding:1.5px 6px; border-radius:6px;}
+  .badge.nari{background:var(--orange-soft); color:#D2701F;}
+  .badge.dali{background:var(--blue-soft); color:#3672B0;}
+  .bubble{
+    background:var(--beige); color:#4A382B; padding:11px 13px; font-size:14px; line-height:1.55;
+    border-radius:4px 16px 16px 16px; border:1px solid #F2E5D3;
+    word-break:keep-all; overflow-wrap:anywhere;
+  }
+  .msg.me .bubble{background:var(--brown); color:#fff; border-color:var(--brown); border-radius:16px 4px 16px 16px;}
+  .msg .foot{font-size:10.5px; color:#BBA995; margin:5px 2px 0;}
+  .msg.me .foot{text-align:right;}
+  .sysline{text-align:center; font-size:11px; color:#B29A83; margin:2px 0 14px;}
+
+  .composer{
+    display:flex; align-items:center; gap:8px; margin-top:12px;
+    background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:6px 6px 6px 8px;
+  }
+  .composer .plus{
+    width:34px; height:34px; flex:none; border-radius:50%; background:#fff; border:1.5px solid var(--line);
+    color:#A08A75; font-size:18px; font-weight:400; display:grid; place-items:center;
+  }
+  .composer input{
+    flex:1; min-width:0; border:0; outline:none; background:transparent;
+    font-size:13.5px; color:var(--ink); padding:8px 2px;
+  }
+  .composer input::placeholder{color:#B5A492; font-size:12.5px; letter-spacing:-.04em;}
+  .send{
+    flex:none; background:var(--brown); color:#fff; font-size:13.5px; font-weight:800;
+    padding:9px 16px; border-radius:11px; box-shadow:0 3px 9px rgba(139,90,43,.25);
+  }
+  .send:active{background:var(--brown-d); transform:scale(.97);}
+
+  /* ---------- map ---------- */
+  .map-wrap{position:relative; padding:4px 2px 4px;}
+  .node{
+    position:relative; background:#fff; border:1.5px solid var(--line); border-radius:16px;
+    padding:12px 14px; margin:0 0 10px; box-shadow:0 2px 10px rgba(120,86,52,.05);
+  }
+  .node .n-top{display:flex; align-items:center; gap:8px;}
+  .node .n-title{font-size:13.5px; font-weight:800; color:#3B2C21;}
+  .node .n-sub{font-size:11.5px; color:var(--muted); margin-top:3px; font-weight:600;}
+  .node .n-emoji{width:28px; height:28px; border-radius:9px; display:grid; place-items:center; font-size:15px; background:var(--beige-2);}
+  .node.boss{background:linear-gradient(160deg,#8B5A2B,#7A4A20); border-color:#7A4A20; color:#fff;}
+  .node.boss .n-title{color:#fff;} .node.boss .n-sub{color:#F0DFCA;}
+  .node.boss .n-emoji{background:rgba(255,255,255,.16);}
+  .branch{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .stem{width:2px; height:14px; background:#E4D3BF; margin:0 auto 10px;}
+  .agent{display:flex; align-items:center; gap:10px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+  .agent .face{width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-size:16px;}
+  .agent.nari .face{background:var(--orange-soft);}
+  .agent.dali .face{background:var(--blue-soft);}
+  .agent .who{font-size:12.5px; font-weight:800;}
+  .agent .what{font-size:11px; color:var(--muted); font-weight:600;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px;}
+  .chip{font-size:11px; font-weight:700; color:#7A6552; background:var(--cream); border:1px solid var(--line); border-radius:999px; padding:3px 9px;}
+
+  /* ---------- dashboard ---------- */
+  .stats{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  .stat{background:var(--beige); border:1px solid #F1E4D2; border-radius:16px; padding:12px;}
+  .stat .k{font-size:11px; font-weight:700; color:#A08A75;}
+  .stat .v{font-size:21px; font-weight:800; letter-spacing:-.03em; color:#3B2C21; margin-top:2px;}
+  .stat .v small{font-size:11.5px; font-weight:700; color:#8B7360; margin-left:3px;}
+  .rows{margin-top:6px;}
+  .row{display:flex; align-items:flex-start; gap:10px; padding:11px 0; border-bottom:1px solid #F6EDE1;}
+  .row:last-child{border-bottom:0; padding-bottom:0;}
+  .row .ico{width:30px; height:30px; border-radius:10px; background:var(--cream); display:grid; place-items:center; font-size:14px; flex:none;}
+  .row .t{font-size:13px; font-weight:800; color:#3B2C21;}
+  .row .d{font-size:11.5px; color:var(--muted); font-weight:600; margin-top:1px;}
+  .row .r{margin-left:auto; font-size:11px; font-weight:800; color:var(--brown); background:#FBF1E4; border-radius:999px; padding:3px 8px; white-space:nowrap; align-self:center;}
+  .row .r.off{color:#A99A8B; background:#F4EFE8;}
+
+  /* ---------- calendar ---------- */
+  .day-tabs{display:flex; gap:6px; margin-bottom:14px;}
+  .day{flex:1; text-align:center; padding:8px 0; border-radius:12px; background:var(--cream); font-size:11.5px; font-weight:700; color:#8B7360;}
+  .day.now{background:var(--brown); color:#fff;}
+  .day b{display:block; font-size:15px; font-weight:800; margin-top:1px;}
+  .tl{position:relative; padding-left:0;}
+  .tl-item{display:flex; gap:10px; padding-bottom:14px; position:relative;}
+  .tl-time{width:46px; flex:none; font-size:12px; font-weight:800; color:#8B7360; padding-top:9px; letter-spacing:-.02em;}
+  .tl-line{width:2px; flex:none; background:#F0E5D6; position:relative; margin:4px 0;}
+  .tl-line::before{content:""; position:absolute; left:50%; top:2px; transform:translateX(-50%); width:9px; height:9px; border-radius:50%; background:#E3D2BD; border:2px solid #fff;}
+  .tl-item.next .tl-line::before{background:var(--brown); box-shadow:0 0 0 4px #F3E6D7;}
+  .tl-item.past{opacity:.55;}
+  .tl-body{flex:1; background:#fff; border-radius:14px; padding:9px 12px; border:1px solid #F3E8DA;}
+  .tl-item.next .tl-body{background:#FDF7EE; border-color:#EBD6B8;}
+  .tl-body .t{font-size:12.5px; font-weight:800; color:#3B2C21; display:flex; align-items:center; gap:6px;}
+  .tl-body .t .now{font-size:9.5px; font-weight:800; color:#fff; background:var(--brown); border-radius:6px; padding:1px 6px;}
+  .tl-body .d{font-size:11px; color:var(--muted); font-weight:600; margin-top:2px;}
+  .assignee{font-size:10px; font-weight:800; border-radius:6px; padding:1px 5px;}
+  .assignee.n{color:#D2701F; background:var(--orange-soft);}
+  .assignee.d{color:#3672B0; background:var(--blue-soft);}
+
+  /* ---------- ai limit ---------- */
+  .gauge{background:var(--beige); border-radius:16px; padding:13px 14px; border:1px solid #F1E4D2;}
+  .gauge .lab{display:flex; justify-content:space-between; font-size:11.5px; font-weight:700; color:#8B7360;}
+  .bar{height:9px; background:#EBDCC9; border-radius:999px; margin-top:8px; overflow:hidden;}
+  .bar i{display:block; height:100%; width:62%; background:linear-gradient(90deg,#C08A52,#8B5A2B); border-radius:999px;}
+  .switches{margin-top:4px;}
+  .sw{display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #F6EDE1;}
+  .sw:last-child{border-bottom:0;}
+  .sw .txt{flex:1;}
+  .sw .t{font-size:12.8px; font-weight:800; color:#3B2C21;}
+  .sw .d{font-size:11px; color:var(--muted); font-weight:600; margin-top:1px;}
+  .toggle{width:44px; height:26px; border-radius:999px; background:#E5D8C8; position:relative; flex:none; transition:background .2s;}
+  .toggle::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.18); transition:left .2s;}
+  .toggle[aria-checked="true"]{background:var(--brown);}
+  .toggle[aria-checked="true"]::after{left:21px;}
+
+  /* ---------- memo ---------- */
+  .memo-form{display:flex; gap:8px; align-items:flex-end;}
+  .memo-form textarea{
+    flex:1; min-height:66px; resize:none; border:1.5px solid var(--line); border-radius:14px;
+    padding:11px 12px; font-size:13.5px; color:var(--ink); outline:none; background:#fff; line-height:1.5;
+  }
+  .memo-form textarea:focus{border-color:#DCC3A2;}
+  .memo-form .send{align-self:stretch; padding:0 16px; border-radius:14px;}
+  .memo-list{margin-top:14px; display:flex; flex-direction:column; gap:9px;}
+  .memo{background:var(--beige); border:1px solid #F1E4D2; border-radius:14px; padding:11px 12px; display:flex; gap:9px;}
+  .memo .mt{flex:1; font-size:13px; color:#4A382B; white-space:pre-wrap; word-break:break-word; line-height:1.5;}
+  .memo .when{font-size:10px; color:#B29A83; margin-top:5px; font-weight:600;}
+  .memo .del{width:26px; height:26px; border-radius:8px; color:#C2AC97; font-size:14px; flex:none; display:grid; place-items:center;}
+  .memo .del:active{background:#F0E3D2;}
+  .empty{text-align:center; font-size:12.5px; color:#B7A593; padding:22px 0 10px; font-weight:600;}
+
+  /* ---------- bots ---------- */
+  .bot{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #F6EDE1;}
+  .bot:last-child{border-bottom:0;}
+  .bot .face{width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-size:20px; flex:none;}
+  .bot.nari .face{background:var(--orange-soft);}
+  .bot.dali .face{background:var(--blue-soft);}
+  .bot .who{font-size:13.5px; font-weight:800; color:#3B2C21; display:flex; align-items:center; gap:6px;}
+  .bot .what{font-size:11.5px; color:var(--muted); font-weight:600; margin-top:2px;}
+  .bot .go{font-size:11.5px; font-weight:800; color:var(--brown); background:#FBF1E4; border-radius:999px; padding:6px 11px; flex:none;}
+  .kv{display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid #F6EDE1; font-size:12.5px;}
+  .kv:last-child{border-bottom:0; padding-bottom:0;}
+  .kv .k{color:var(--muted); font-weight:700;}
+  .kv .v{font-weight:800; color:#3B2C21; text-align:right;}
+  .v.warn{color:#C7893E;}
+  .v.ok{color:var(--green);}
+
+  /* ---------- bottom nav ---------- */
+  .bottomnav{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top,var(--cream) 72%,rgba(250,247,242,0));
+  }
+  .bottomnav .inner{
+    max-width:460px; margin:0 auto; background:#fff; border-radius:20px;
+    box-shadow:0 8px 28px rgba(120,86,52,.12); padding:7px; display:flex; gap:7px;
+  }
+  .navbtn{
+    flex:1; height:46px; border-radius:14px; font-size:12.5px; font-weight:800; color:#8B7360;
+    display:flex; align-items:center; justify-content:center; gap:6px; transition:all .18s;
+  }
+  .navbtn span.ico{font-size:16px;}
+  .navbtn[aria-selected="true"]{background:var(--brown); color:#fff; box-shadow:0 4px 12px rgba(139,90,43,.26);}
+
+  /* ---------- sheet ---------- */
+  .scrim{position:fixed; inset:0; background:rgba(45,32,22,.38); backdrop-filter:blur(2px); opacity:0; pointer-events:none; transition:opacity .22s; z-index:80;}
+  .scrim.on{opacity:1; pointer-events:auto;}
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:90; background:var(--cream);
+    border-radius:26px 26px 0 0; padding:10px 16px calc(26px + env(safe-area-inset-bottom));
+    transform:translateY(102%); transition:transform .28s cubic-bezier(.3,.9,.3,1); max-height:88vh; overflow-y:auto;
+  }
+  .sheet.on{transform:translateY(0);}
+  .sheet .grab{width:38px; height:4px; border-radius:99px; background:#E0CFBB; margin:2px auto 12px;}
+  .sheet h3{margin:0 0 4px; font-size:16px; font-weight:800;}
+  .sheet .lead{font-size:12px; color:var(--muted); margin:0 0 14px; font-weight:600; line-height:1.5;}
+  .field{margin-bottom:10px;}
+  .field label{display:block; font-size:11.5px; font-weight:800; color:#8B7360; margin-bottom:5px;}
+  .field input{
+    width:100%; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; font-size:12.5px;
+    background:#fff; outline:none; color:var(--ink);
+  }
+  .field input:focus{border-color:#DCC3A2;}
+  .sheet .btn-row{display:flex; gap:8px; margin-top:14px;}
+  .btn{flex:1; height:46px; border-radius:14px; font-size:13.5px; font-weight:800;}
+  .btn.primary{background:var(--brown); color:#fff;}
+  .btn.ghost{background:#fff; border:1.5px solid var(--line); color:#7A6552;}
+  .btn.danger{background:#FDF0EC; color:#C05B3B; border:1.5px solid #F3D9CF;}
+
+  .toast{
+    position:fixed; left:50%; bottom:96px; transform:translate(-50%,12px); z-index:120;
+    background:rgba(59,44,33,.94); color:#fff; font-size:12.5px; font-weight:700;
+    padding:10px 16px; border-radius:999px; opacity:0; pointer-events:none; transition:all .25s;
+    max-width:88vw; text-align:center;
+  }
+  .toast.on{opacity:1; transform:translate(-50%,0);}
+  .view{display:none; animation:fade .22s ease;}
+  .view.on{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  @media (max-width:360px){
+    .brand h1{font-size:17px;} .tab{font-size:12.5px;} .send{padding:9px 13px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="avatar"><img src="./icon-192.png" alt="박현민 AI 오피스"></div>
+    <div class="brand">
+      <h1>박현민 AI 오피스</h1>
+      <div class="sub"><span class="dot"></span>현민님 전용 · 11월 26일 목요일</div>
+    </div>
+    <div class="server-pill" id="serverPill" role="button" tabindex="0" aria-label="AI 서버 설정">
+      <span class="gear">⚙️</span>AI <span class="chip">서버</span>
+    </div>
+    <button class="icon-btn" id="refreshBtn" aria-label="새로고침">↻</button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="주요 화면">
+    <button class="tab" role="tab" data-view="map" aria-selected="false">🗺️ 맵</button>
+    <button class="tab" role="tab" data-view="room" aria-selected="true">💬 회의실</button>
+    <button class="tab" role="tab" data-view="dash" aria-selected="false">📊 대시보드</button>
+    <button class="tab" role="tab" data-view="cal" aria-selected="false">📅 캘린더</button>
+    <button class="tab" role="tab" data-view="ai" aria-selected="false">⚡ AI한도</button>
+    <button class="tab" role="tab" data-view="memo" aria-selected="false">📝 메모</button>
+  </nav>
+
+  <!-- ================= 회의실 ================= -->
+  <section class="view on" id="view-room">
+    <div class="card" style="padding:14px 12px 12px">
+      <div class="subtabs" role="tablist" aria-label="회의실">
+        <button class="subtab" role="tab" data-room="all" aria-selected="true">🏛️ 대회의실</button>
+        <button class="subtab" role="tab" data-room="nari" aria-selected="false">🧡 나리</button>
+        <button class="subtab" role="tab" data-room="dali" aria-selected="false">💙 달이</button>
+      </div>
+      <div class="room-meta">
+        <div class="l" id="roomTitle">🏛️ 원컷 · 클립 · 스레드 · 블로그</div>
+        <div class="on-badge" id="roomOn">ON 2명</div>
+      </div>
+      <div class="chat" id="chat"></div>
+      <div class="composer">
+        <button class="plus" id="plusBtn" aria-label="첨부">+</button>
+        <input id="msgInput" type="text" enterkeyhint="send" placeholder="대장님, 지시를 한 줄로 (@all = 전원)" aria-label="메시지 입력">
+        <button class="send" id="sendBtn">보내기</button>
+      </div>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="kv" style="border:0;padding:2px 0">
+        <span class="k">메시지는 이 기기에 저장됩니다</span>
+        <span class="v warn">공용 DB 미연결</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 맵 ================= -->
+  <section class="view" id="view-map">
+    <div class="card">
+      <div class="card-head"><h2>🗺️ 우리 파이프라인</h2><span class="hint">2026.11.26 기준</span></div>
+      <div class="map-wrap">
+        <div class="node boss">
+          <div class="n-top">
+            <div class="n-emoji">👤</div>
+            <div><div class="n-title">박현민 · 대표</div><div class="n-sub">지시 · 승인 · 돈이 걸린 결정</div></div>
+          </div>
+        </div>
+        <div class="stem"></div>
+        <div class="node">
+          <div class="n-top">
+            <div class="n-emoji">🎬</div>
+            <div><div class="n-title">원컷스튜디오</div><div class="n-sub">숏폼 대행 · 크몽 7종 · 콜드메일 · 상담</div></div>
+          </div>
+          <div class="chip-row"><span class="chip">크몽 7</span><span class="chip">스레드 2회</span><span class="chip">블로그 20:30</span><span class="chip">콜드메일 25통</span></div>
+          <div class="agent nari"><div class="face">🧡</div><div><div class="who">나리</div><div class="what">기획 · 컷 정리 · 납품 · 영업</div></div></div>
+        </div>
+        <div class="branch">
+          <div class="node" style="margin-bottom:10px">
+            <div class="n-top">
+              <div class="n-emoji">📱</div>
+              <div><div class="n-title">네이버 클립</div><div class="n-sub">매일 19:30 · 1편</div></div>
+            </div>
+            <div class="agent nari"><div class="face">🧡</div><div><div class="who">나리</div><div class="what">제작 · 배달</div></div></div>
+          </div>
+          <div class="node" style="margin-bottom:10px">
+            <div class="n-top">
+              <div class="n-emoji">🌿</div>
+              <div><div class="n-title">건기식 스레드</div><div class="n-sub">매일 21:00 · 1회</div></div>
+            </div>
+            <div class="agent nari"><div class="face">🧡</div><div><div class="who">나리</div><div class="what">글 · 복붙 배달</div></div></div>
+          </div>
+        </div>
+        <div class="node" style="margin-top:0">
+          <div class="n-top">
+            <div class="n-emoji">🗂️</div>
+            <div><div class="n-title">달이 협업</div><div class="n-sub">블로그 · 당근 · 스마트스토어 · 체험단</div></div>
+          </div>
+          <div class="agent dali"><div class="face">💙</div><div><div class="who">달이</div><div class="what">운영 · 주문 · 이벤트</div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 대시보드 ================= -->
+  <section class="view" id="view-dash">
+    <div class="card">
+      <div class="card-head"><h2>📊 오늘의 운영 현황</h2><span class="hint">11.26 (목)</span></div>
+      <div class="stats">
+        <div class="stat"><div class="k">크몽 서비스</div><div class="v">7<small>종</small></div></div>
+        <div class="stat"><div class="k">스레드</div><div class="v">3<small>회 / 일</small></div></div>
+        <div class="stat"><div class="k">콜드메일</div><div class="v">25<small>통 / 평일</small></div></div>
+        <div class="stat"><div class="k">네이버 클립</div><div class="v">19:30</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>원컷스튜디오</h2><span class="hint">나리</span></div>
+      <div class="rows">
+        <div class="row"><div class="ico">🛒</div><div><div class="t">크몽 7종</div><div class="d">판매중 1 · 심사중 6 (5개 업종)</div></div><div class="r">확인 09·20시</div></div>
+        <div class="row"><div class="ico">🧵</div><div><div class="t">원컷 스레드 2회</div><div class="d">08:30 일상 · 21:30 일내용 (반말)</div></div><div class="r">배달</div></div>
+        <div class="row"><div class="ico">✉️</div><div><div class="t">콜드메일 25통</div><div class="d">평일 10:00 · 누계 178행</div></div><div class="r">평일</div></div>
+        <div class="row"><div class="ico">📄</div><div><div class="t">상담 · 견적</div><div class="d">15만 / 45만 · 다건 38~40만</div></div><div class="r">대기</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>콘텐츠 채널</h2><span class="hint">우리 쪽</span></div>
+      <div class="rows">
+        <div class="row"><div class="ico">📱</div><div><div class="t">네이버 클립</div><div class="d">19:30 1편 · 27호 배달 완료</div></div><div class="r">가동</div></div>
+        <div class="row"><div class="ico">🌿</div><div><div class="t">건기식 스레드</div><div class="d">21:00 1회 · 31호까지</div></div><div class="r">가동</div></div>
+        <div class="row"><div class="ico">▶️</div><div><div class="t">유튜브 전 채널</div><div class="d">응? · 엉? 일시정지</div></div><div class="r off">중지</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>달이 담당</h2><span class="hint">💙</span></div>
+      <div class="rows">
+        <div class="row"><div class="ico">✍️</div><div><div class="t">원컷 블로그</div><div class="d">20:30 1편 · 원컷스튜디오</div></div><div class="r">달이</div></div>
+        <div class="row"><div class="ico">🥕</div><div><div class="t">당근 비즈프로필</div><div class="d">나우이지 · 광고·주문·채팅</div></div><div class="r">달이</div></div>
+        <div class="row"><div class="ico">🏪</div><div><div class="t">스마트스토어</div><div class="d">신규주문 확인 18:00</div></div><div class="r">달이</div></div>
+        <div class="row"><div class="ico">🎁</div><div><div class="t">체험단 · 이벤트</div><div class="d">신청 · 후기 관리</div></div><div class="r">달이</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 캘린더 ================= -->
+  <section class="view" id="view-cal">
+    <div class="card">
+      <div class="card-head"><h2>📅 오늘 루틴</h2><span class="hint" id="todayLabel">11.26 (목)</span></div>
+      <div class="day-tabs">
+        <div class="day" data-day="-1">어제<b>25</b></div>
+        <div class="day now" data-day="0">오늘<b>26</b></div>
+        <div class="day" data-day="1">내일<b>27</b></div>
+      </div>
+      <div class="tl" id="timeline"></div>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="kv"><span class="k">🧡 나리</span><span class="v">클립 · 스레드 · 크몽 · 콜드메일 · 건기식</span></div>
+      <div class="kv"><span class="k">💙 달이</span><span class="v">블로그 · 당근 · 스마트스토어</span></div>
+    </div>
+  </section>
+
+  <!-- ================= AI한도 ================= -->
+  <section class="view" id="view-ai">
+    <div class="card">
+      <div class="card-head"><h2>⚡ 오늘 가동 현황</h2><span class="hint">자동 스케줄</span></div>
+      <div class="gauge">
+        <div class="lab"><span>가동 중인 스케줄</span><span>8 / 11</span></div>
+        <div class="bar"><i></i></div>
+        <div style="font-size:11px; color:#A08A75; font-weight:600; margin-top:8px">유튜브 3채널은 일시정지로 빼두었습니다</div>
+      </div>
+      <div class="rows" style="margin-top:12px">
+        <div class="row"><div class="ico">✅</div><div><div class="t">클립 · 스레드 · 블로그</div><div class="d">19:30 / 08:30·21:00·21:30 / 20:30</div></div><div class="r">가동</div></div>
+        <div class="row"><div class="ico">✅</div><div><div class="t">확인 · 감시</div><div class="d">크몽 09·20시 · 콜드메일 10시 · 메일 30분</div></div><div class="r">가동</div></div>
+        <div class="row"><div class="ico">⏸️</div><div><div class="t">유튜브 응? · 엉?</div><div class="d">재개는 대장님 지시 대기</div></div><div class="r off">정지</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>절약 모드</h2><span class="hint">크레딧</span></div>
+      <div class="switches">
+        <div class="sw">
+          <div class="txt"><div class="t">야간 절전 (23:00 ~ 07:30)</div><div class="d">긴급 알림 외에는 조용히</div></div>
+          <button class="toggle" role="switch" aria-checked="true" data-pref="night"></button>
+        </div>
+        <div class="sw">
+          <div class="txt"><div class="t">알림 묶어서 받기</div><div class="d">보고를 하루 3번(09·14·21시)에 모아서</div></div>
+          <button class="toggle" role="switch" aria-checked="false" data-pref="digest"></button>
+        </div>
+        <div class="sw">
+          <div class="txt"><div class="t">저화질 미리보기</div><div class="d">영상 확인은 필요할 때만</div></div>
+          <button class="toggle" role="switch" aria-checked="true" data-pref="lite"></button>
+        </div>
+      </div>
+      <div style="font-size:11px; color:#B29A83; font-weight:600; margin-top:10px; line-height:1.5">
+        절약 이력 — 유튜브 4채널 → 1채널 → 정지, 타입캐스트 해지(11.24), 감시 30분 → 1시간
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 메모 ================= -->
+  <section class="view" id="view-memo">
+    <div class="card">
+      <div class="card-head"><h2>📝 지시 · 아이디어</h2><span class="hint" id="memoCount">0개</span></div>
+      <div class="memo-form">
+        <textarea id="memoInput" placeholder="떠오른 지시나 아이디어를 적어두세요&#10;(이 기기에 저장됩니다)"></textarea>
+        <button class="send" id="memoAdd">추가</button>
+      </div>
+      <div class="memo-list" id="memoList"></div>
+      <div class="empty" id="memoEmpty">아직 메모가 없습니다</div>
+    </div>
+  </section>
+
+  <!-- ================= 봇 ================= -->
+  <section class="view" id="view-bots">
+    <div class="card">
+      <div class="card-head"><h2>🤖 이 오피스의 봇</h2><span class="hint">2명 활동 중</span></div>
+      <div class="bot nari">
+        <div class="face">🧡</div>
+        <div style="flex:1"><div class="who">나리 <span class="badge nari">오렌지</span></div><div class="what">원컷스튜디오 · 클립 · 스레드 · 크몽</div></div>
+        <button class="go" data-open-room="nari">1:1 열기</button>
+      </div>
+      <div class="bot dali">
+        <div class="face">💙</div>
+        <div style="flex:1"><div class="who">달이 <span class="badge dali">블루</span></div><div class="what">블로그 · 당근 · 스마트스토어 · 체험단</div></div>
+        <button class="go" data-open-room="dali">1:1 열기</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>AI 서버</h2><span class="hint">이 기기</span></div>
+      <div class="kv"><span class="k">연결 방식</span><span class="v">정적 웹앱 (PWA)</span></div>
+      <div class="kv"><span class="k">데이터 저장</span><span class="v">이 브라우저 localStorage</span></div>
+      <div class="kv"><span class="k">공용 DB (Supabase)</span><span class="v warn" id="dbState">미연결</span></div>
+      <div class="kv"><span class="k">설치</span><span class="v">홈 화면에 추가 → 앱처럼 실행</span></div>
+      <div class="btn-row">
+        <button class="btn ghost" id="installHelp">설치 방법</button>
+        <button class="btn primary" id="openSettings2">DB 설정</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<nav class="bottomnav" aria-label="하단 메뉴">
+  <div class="inner">
+    <button class="navbtn" data-nav="bots" aria-selected="false"><span class="ico">🤖</span>봇</button>
+    <button class="navbtn" data-nav="room" aria-selected="true"><span class="ico">💬</span>대화</button>
+    <button class="navbtn" data-nav="memo" aria-selected="false"><span class="ico">📝</span>메모</button>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="AI 서버 설정">
+  <div class="grab"></div>
+  <h3>⚙️ AI 서버 설정</h3>
+  <p class="lead">지금은 이 기기에만 저장되는 1차 버전입니다. 아래에 Supabase 프로젝트를 넣으면 같은 오피스를 폰과 PC에서 함께 쓸 수 있게 됩니다. (실시간 동기화는 2차 버전에서 연결)</p>
+
+  <div class="kv"><span class="k">현재 연결</span><span class="v" id="sheetDbState">로컬 저장 (이 기기)</span></div>
+  <div class="kv" style="margin-bottom:12px"><span class="k">배포</span><span class="v">GitHub Pages</span></div>
+
+  <div class="field"><label for="sbUrl">Supabase URL</label><input id="sbUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://xxxx.supabase.co"></div>
+  <div class="field"><label for="sbKey">Anon key</label><input id="sbKey" type="text" autocomplete="off" placeholder="eyJhbGciOi..."></div>
+  <div style="font-size:11px; color:#B29A83; font-weight:600; line-height:1.5; margin-bottom:6px">
+    키는 이 브라우저에만 저장되고 어디로도 전송되지 않습니다. 저장만 해두면 2차 버전에서 자동으로 붙습니다.
+  </div>
+
+  <div class="btn-row">
+    <button class="btn ghost" id="sheetClose">닫기</button>
+    <button class="btn primary" id="saveDb">저장</button>
+  </div>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn danger" id="resetAll">이 기기 데이터 초기화</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   박현민 AI 오피스 — 1차 프론트엔드 PWA
+   저장: localStorage. 향후 Supabase 연동은 OfficeDB 어댑터에만 붙이면 된다.
+   ========================================================= */
+(function(){
+  "use strict";
+
+  const LS = {
+    msgs: "hmo.messages.v1",
+    memos: "hmo.memos.v1",
+    cfg: "hmo.cfg.v1",
+    prefs: "hmo.prefs.v1",
+    ui: "hmo.ui.v1"
+  };
+  const $ = (s, r) => (r||document).querySelector(s);
+  const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+
+  function load(key, fallback){
+    try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function save(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch(e){ toast("저장 공간이 부족합니다"); return false; }
+  }
+
+  /* ---------- DB 어댑터 (2차: Supabase) ---------- */
+  const OfficeDB = {
+    mode: "local",
+    client: null,
+    async init(){
+      const cfg = load(LS.cfg, {});
+      if (cfg.supabaseUrl && cfg.supabaseKey) {
+        // 2차 버전에서 supabase-js를 붙이는 자리.
+        // this.client = supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+        this.mode = "configured";
+      } else {
+        this.mode = "local";
+      }
+      return this.mode;
+    },
+    async listMessages(room){ return load(LS.msgs, seedMessages()).filter(m => !room || m.room === room); },
+    async sendMessage(m){ const all = load(LS.msgs, seedMessages()); all.push(m); save(LS.msgs, all); return m; }
+  };
+  window.OfficeDB = OfficeDB; // 설정 화면·2차 연동용 훅
+
+  /* ---------- 봇 ---------- */
+  const BOTS = {
+    nari: { name:"나리", emoji:"🧡", face:"🧡", label:"오렌지", color:"nari" },
+    dali: { name:"달이", emoji:"💙", face:"💙", label:"블루",   color:"dali" }
+  };
+
+  const todayKey = new Date().toISOString().slice(0,10);
+
+  function seedMessages(){
+    // 최초 실행 시 대회의실 기본 현황 (11.26)
+    return [
+      { id:"s1", room:"all", from:"nari", text:"대장님, 11월 26일 목요일 시작합니다 🧡 네이버 클립 27호는 어제 19:30에 배달 끝났고, 원컷 스레드 08:30도 나갔어요.", ts:"08:31", date:todayKey, seeded:1 },
+      { id:"s2", room:"all", from:"dali", text:"대장님, 달이도 대회의실 도착했습니다 💙 블로그·체험단·당근 쪽은 제가 맡을게요. 20:30 블로그 초안 미리 준비해 둘게요.", ts:"08:34", date:todayKey, seeded:1 },
+      { id:"s3", room:"all", from:"nari", text:"크몽 7종 아침 확인했어요. 1호만 판매중이고 나머지 6종은 심사 중입니다. 문의 들어오면 바로 보고드릴게요.", ts:"09:02", date:todayKey, seeded:1 },
+      { id:"s4", room:"all", from:"dali", text:"유튜브는 응?·엉? 모두 일시정지 상태 그대로예요. 재개 지시 주시면 26호부터 준비할게요.", ts:"09:08", date:todayKey, seeded:1 },
+      { id:"d1", room:"nari", from:"nari", text:"대장님, 나리 1:1입니다 🧡 클립 26호 조회가 3회로 떨어졌어요. 오늘 27호는 무TTS 유지할지, TTS 다시 넣을지 정해주세요.", ts:"09:20", date:todayKey, seeded:1 },
+      { id:"d2", room:"dali", from:"dali", text:"대장님, 달이 1:1입니다 💙 나우이지업 재발방지확약서 서명본만 받으면 판매관리 제한 풀 수 있어요.", ts:"09:24", date:todayKey, seeded:1 }
+    ];
+  }
+
+  let messages = load(LS.msgs, null);
+  if (!messages) { messages = seedMessages(); save(LS.msgs, messages); }
+
+  let currentRoom = "all";
+  let currentView = load(LS.ui, {}).view || "room";
+
+  /* ---------- 화면 전환 ---------- */
+  const TABS = { map:"map", room:"room", dash:"dash", cal:"cal", ai:"ai", memo:"memo" };
+  function setView(v, opts){
+    if (!document.getElementById("view-" + v)) v = "room";
+    currentView = v;
+    $$(".view").forEach(el => el.classList.toggle("on", el.id === "view-" + v));
+    const tabFor = TABS[v];
+    $$(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.view === tabFor)));
+    const navFor = (v === "room") ? "room" : (v === "memo" ? "memo" : (v === "bots" ? "bots" : null));
+    $$(".navbtn").forEach(b => b.setAttribute("aria-selected", String(b.dataset.nav === (navFor || ""))));
+    if (v === "cal") renderTimeline();
+    if (v === "bots") $('#dbState').textContent = OfficeDB.mode === "configured" ? "설정됨 (2차 대기)" : "미연결";
+    const ui = load(LS.ui, {}); ui.view = v; save(LS.ui, ui);
+    window.scrollTo({ top:0, behavior:"smooth" });
+    if (v === "room") scrollChat();
+  }
+  $$(".tab").forEach(t => t.addEventListener("click", () => setView(t.dataset.view)));
+  $$(".navbtn").forEach(b => b.addEventListener("click", () => setView(b.dataset.nav)));
+
+  /* ---------- 회의실 ---------- */
+  function renderRoom(){
+    const chat = $('#chat');
+    const list = messages.filter(m => currentRoom === "all" ? true : (m.room === currentRoom || (m.room === "all" && m.from === currentRoom)));
+    // 대회의실: 전체 / 1:1: 그 봇과의 방 (대회의실에 그 봇이 한 말도 함께)
+    const shown = currentRoom === "all" ? messages.filter(m => m.room === "all") : list;
+    chat.innerHTML = "";
+    if (!shown.length){
+      chat.innerHTML = '<div class="empty">아직 대화가 없습니다<br>아래에 한 줄 지시를 남겨보세요</div>';
+      return;
+    }
+    let lastDate = null;
+    shown.forEach(m => {
+      if (m.date && m.date !== lastDate && m.date !== todayKey){
+        lastDate = m.date;
+      }
+      const me = m.from === "user";
+      const bot = me ? null : BOTS[m.from];
+      const el = document.createElement("div");
+      el.className = "msg " + (me ? "me" : (m.from === "nari" ? "nari" : "dali"));
+      if (me){
+        el.innerHTML = '<div class="body"><div class="bubble"></div><div class="foot">' + esc(m.ts) + (m.saved ? " · 이 기기에 저장됨" : "") + '</div></div>';
+        el.querySelector(".bubble").textContent = m.text;
+      } else {
+        el.innerHTML =
+          '<div class="face">' + bot.face + '</div>' +
+          '<div class="body"><div class="who">' + bot.name +
+            '<span class="badge ' + bot.color + '">' + bot.label + '</span>' +
+            '<time>' + esc(m.ts) + '</time></div>' +
+          '<div class="bubble"></div></div>';
+        el.querySelector(".bubble").textContent = m.text;
+      }
+      chat.appendChild(el);
+    });
+    scrollChat();
+  }
+  function scrollChat(){
+    const c = $('#chat'); if (!c) return;
+    requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
+  }
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  $$(".subtab").forEach(t => t.addEventListener("click", () => {
+    $$(".subtab").forEach(x => x.setAttribute("aria-selected", "false"));
+    t.setAttribute("aria-selected", "true");
+    currentRoom = t.dataset.room;
+    const meta = {
+      all:  ["🏛️ 원컷 · 클립 · 스레드 · 블로그", "ON 2명"],
+      nari: ["🧡 나리 · 1:1", "나리 활동 중"],
+      dali: ["💙 달이 · 1:1", "달이 활동 중"]
+    }[currentRoom];
+    $('#roomTitle').textContent = meta[0];
+    $('#roomOn').textContent = meta[1];
+    if (currentRoom === "all"){
+      $('#msgInput').placeholder = "대장님, 지시를 한 줄로 (@all = 전원)";
+    } else {
+      $('#msgInput').placeholder = "대장님, " + BOTS[currentRoom].name + "에게 한 줄 지시";
+    }
+    renderRoom();
+  }));
+
+  function nowTime(){
+    const d = new Date();
+    return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
+
+  function sendMessage(){
+    const input = $('#msgInput');
+    const text = input.value.trim();
+    if (!text){ input.focus(); return; }
+    const msg = {
+      id: "u" + Date.now(),
+      room: currentRoom === "all" ? "all" : currentRoom,
+      from: "user",
+      text: text,
+      ts: nowTime(),
+      date: new Date().toISOString().slice(0,10),
+      saved: 1
+    };
+    messages.push(msg);
+    save(LS.msgs, messages);
+    input.value = "";
+    renderRoom();
+    toast(OfficeDB.mode === "configured"
+      ? "저장됨 · 2차 버전에서 나리·달이에게 전달됩니다"
+      : "저장됨 · 지금은 이 기기에만 보관됩니다");
+  }
+  $('#sendBtn').addEventListener("click", sendMessage);
+  $('#msgInput').addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.isComposing){ e.preventDefault(); sendMessage(); }
+  });
+  $('#plusBtn').addEventListener("click", () => {
+    const chip = document.createElement("span");
+    toast("첨부는 2차 버전에서 열립니다 · 지금은 텍스트로 지시해 주세요");
+  });
+
+  /* ---------- 캘린더 ---------- */
+  const ROUTINE = [
+    { t:"08:30", title:"원컷 스레드 (일상)", d:"반말 · 5대 규칙", who:"nari" },
+    { t:"09:00", title:"크몽 문의 확인", d:"7종 상태 · 루키광고", who:"nari" },
+    { t:"10:00", title:"콜드메일 25통", d:"평일만 · 누계 178행", who:"nari" },
+    { t:"12:00", title:"원컷 스레드 (점심)", d:"일상 톤", who:"nari" },
+    { t:"14:00", title:"크몽 순위 점검", d:"노출 · 키워드", who:"nari" },
+    { t:"19:30", title:"네이버 클립 1편", d:"제작 → 배달", who:"nari" },
+    { t:"20:00", title:"크몽 저녁 확인", d:"문의 · 답변", who:"nari" },
+    { t:"20:30", title:"원컷 블로그 1편", d:"원컷스튜디오 브랜드", who:"dali" },
+    { t:"21:00", title:"건기식 스레드", d:"나우코스 · 1회", who:"nari" },
+    { t:"21:30", title:"원컷 스레드 (일내용)", d:"하루 마무리", who:"nari" }
+  ];
+
+  function renderTimeline(){
+    const tl = $('#timeline'); if (!tl) return;
+    const d = new Date();
+    const nowMin = d.getHours()*60 + d.getMinutes();
+    let nextFound = false;
+    tl.innerHTML = "";
+    ROUTINE.forEach(item => {
+      const [h,m] = item.t.split(":").map(Number);
+      const mins = h*60 + m;
+      const past = mins < nowMin - 30;
+      const isNext = !past && !nextFound;
+      if (isNext) nextFound = true;
+      const el = document.createElement("div");
+      el.className = "tl-item" + (past ? " past" : "") + (isNext ? " next" : "");
+      el.innerHTML =
+        '<div class="tl-time">' + item.t + '</div>' +
+        '<div class="tl-line"></div>' +
+        '<div class="tl-body"><div class="t">' + esc(item.title) +
+          (isNext ? '<span class="now">다음</span>' : '') +
+        '</div><div class="d">' + esc(item.d) +
+          ' <span class="assignee ' + (item.who === "nari" ? "n" : "d") + '">' + BOTS[item.who].name + '</span>' +
+        '</div></div>';
+      tl.appendChild(el);
+    });
+    const dd = new Date();
+    const label = (dd.getMonth()+1) + "." + dd.getDate() + " (" + "일월화수목금토"[dd.getDay()] + ")";
+    $('#todayLabel').textContent = label;
+  }
+  $$(".day").forEach(b => b.addEventListener("click", () => {
+    $$(".day").forEach(x => x.classList.remove("now"));
+    b.classList.add("now");
+    toast(b.dataset.day === "0" ? "오늘 루틴입니다" : "지난·다음 날 루틴은 2차 버전에서 열립니다");
+    renderTimeline();
+  }));
+
+  /* ---------- 메모 ---------- */
+  let memos = load(LS.memos, []);
+  function renderMemos(){
+    const list = $('#memoList');
+    list.innerHTML = "";
+    $('#memoCount').textContent = memos.length + "개";
+    $('#memoEmpty').style.display = memos.length ? "none" : "block";
+    memos.forEach(m => {
+      const el = document.createElement("div");
+      el.className = "memo";
+      el.innerHTML = '<div class="mt"></div><button class="del" aria-label="삭제">✕</button>';
+      el.querySelector(".mt").innerHTML = '<div class="tx"></div><div class="when">' + esc(m.when) + '</div>';
+      el.querySelector(".tx").textContent = m.text;
+      el.querySelector(".del").addEventListener("click", () => {
+        if (!confirm("이 메모를 지울까요?")) return;
+        memos = memos.filter(x => x.id !== m.id);
+        save(LS.memos, memos); renderMemos(); toast("메모를 지웠습니다");
+      });
+      list.appendChild(el);
+    });
+  }
+  function addMemo(){
+    const ta = $('#memoInput');
+    const text = ta.value.trim();
+    if (!text){ ta.focus(); return; }
+    const d = new Date();
+    const when = (d.getMonth()+1) + "." + d.getDate() + " " + nowTime();
+    memos.unshift({ id:"m"+Date.now(), text:text, when:when });
+    save(LS.memos, memos);
+    ta.value = ""; renderMemos(); toast("메모를 저장했습니다");
+  }
+  $('#memoAdd').addEventListener("click", addMemo);
+  $('#memoInput').addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); addMemo(); }
+  });
+
+  /* ---------- 설정 시트 ---------- */
+  const scrim = $('#scrim'), sheet = $('#sheet');
+  function openSheet(){
+    const cfg = load(LS.cfg, {});
+    $('#sbUrl').value = cfg.supabaseUrl || "";
+    $('#sbKey').value = cfg.supabaseKey || "";
+    $('#sheetDbState').textContent = (cfg.supabaseUrl && cfg.supabaseKey) ? "설정됨 (실시간은 2차)" : "로컬 저장 (이 기기)";
+    scrim.classList.add("on"); sheet.classList.add("on");
+  }
+  function closeSheet(){ scrim.classList.remove("on"); sheet.classList.remove("on"); }
+  $('#serverPill').addEventListener("click", openSheet);
+  $('#serverPill').addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") openSheet(); });
+  $('#openSettings2').addEventListener("click", openSheet);
+  $('#sheetClose').addEventListener("click", closeSheet);
+  scrim.addEventListener("click", closeSheet);
+
+  $('#saveDb').addEventListener("click", async () => {
+    const url = $('#sbUrl').value.trim(), key = $('#sbKey').value.trim();
+    if (!url && !key){ save(LS.cfg, {}); await OfficeDB.init(); closeSheet(); toast("설정을 비웠습니다 · 로컬 저장"); return; }
+    if (!/^https:\/\/.+\.supabase\.co\/?$/.test(url) && !/^https?:\/\//.test(url)){
+      toast("Supabase URL 형식을 확인해 주세요"); return;
+    }
+    save(LS.cfg, { supabaseUrl:url, supabaseKey:key, savedAt: Date.now() });
+    await OfficeDB.init();
+    closeSheet();
+    toast("저장했습니다 · 실시간 동기화는 2차 버전에서 연결됩니다");
+  });
+
+  $('#resetAll').addEventListener("click", () => {
+    if (!confirm("이 기기의 대화·메모·설정을 모두 지울까요? 되돌릴 수 없습니다.")) return;
+    Object.values(LS).forEach(k => { try{ localStorage.removeItem(k); }catch(e){} });
+    location.reload();
+  });
+
+  $('#installHelp').addEventListener("click", openSheet);
+
+  /* ---------- 새로고침 ---------- */
+  $('#refreshBtn').addEventListener("click", async () => {
+    const btn = $('#refreshBtn');
+    btn.classList.add("spin");
+    setTimeout(() => btn.classList.remove("spin"), 620);
+    await OfficeDB.init();
+    messages = load(LS.msgs, seedMessages());
+    renderRoom(); renderMemos(); renderTimeline();
+    toast("새로고침 완료 · " + nowTime());
+  });
+
+  /* ---------- 봇 → 1:1 ---------- */
+  $$("[data-open-room]").forEach(b => b.addEventListener("click", () => {
+    const r = b.dataset.openRoom;
+    setView("room");
+    const target = $$(".subtab").find(t => t.dataset.room === r);
+    if (target) target.click();
+  }));
+
+  /* ---------- 설정 저장 토글 ---------- */
+  const prefs = load(LS.prefs, { night:true, digest:false, lite:true });
+  $$(".toggle").forEach(t => {
+    const k = t.dataset.pref;
+    t.setAttribute("aria-checked", String(!!prefs[k]));
+    t.addEventListener("click", () => {
+      prefs[k] = !prefs[k];
+      t.setAttribute("aria-checked", String(prefs[k]));
+      save(LS.prefs, prefs);
+    });
+  });
+
+  /* ---------- 토스트 ---------- */
+  let toastTimer;
+  function toast(msg){
+    const el = $('#toast'); if (!el) return;
+    el.textContent = msg; el.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("on"), 2400);
+  }
+  window.hmoToast = toast;
+
+  /* ---------- 부팅 ---------- */
+  (async function boot(){
+    await OfficeDB.init();
+    renderRoom(); renderMemos(); renderTimeline();
+    // 저장된 뷰 복원 (기본: 회의실)
+    setView(currentView || "room");
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      });
+    }
+  })();
+})();
+</script>
+</body>
+</html>
