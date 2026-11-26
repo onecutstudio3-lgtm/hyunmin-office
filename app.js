@@ -36,8 +36,11 @@
 
   /* ---------- 봇 ---------- */
   const BOTS = {
-    nari: { name:"나리", emoji:"🧡", face:"🧡", label:"오렌지", color:"nari" },
-    dali: { name:"달이", emoji:"💙", face:"💙", label:"블루",   color:"dali" }
+    nari:    { name:"나리",   emoji:"🧡", face:"🧡", label:"오렌지",  color:"nari" },
+    dali:    { name:"달이",   emoji:"💙", face:"💙", label:"블루",    color:"dali" },
+    hark:    { name:"호크",   emoji:"🦅", face:"🦅", label:"Hark",    color:"dali" },
+    claude:  { name:"클로드", emoji:"🤖", face:"🤖", label:"Claude",  color:"nari" },
+    keyring: { name:"키링",   emoji:"🔑", face:"🔑", label:"Keyring", color:"dali" }
   };
 
   function localDateKey(d){
@@ -348,7 +351,7 @@
         return;
       }
       const me = kind === "user";
-      const bot = me ? null : BOTS[kind];
+      const bot = me ? null : (BOTS[kind] || { name: esc(kind), emoji:"🤖", face:"🤖", label:"AI", color:"dali" });
       const el = document.createElement("div");
       el.className = "msg " + (me ? "me" : (kind === "nari" ? "nari" : "dali"));
       if (me){
