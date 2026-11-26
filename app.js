@@ -175,7 +175,7 @@
   let messages = load(LS.msgs, []);
   let memos = load(LS.memos, []);
   let currentRoom = "all";
-  let currentView = load(LS.ui, {}).view || "room";
+  let currentView = load(LS.ui, {}).view || "map";
   let pollTimer = null;
   const seenMsg = new Set();
   const seenMemo = new Set();
@@ -586,6 +586,52 @@
     });
   });
 
+  /* ---------- 맵: 본부 오피스 ---------- */
+  const officeEl = $("#officeMap");
+  const moveBtn = $("#moveToggle");
+
+  function applyMovePref(){
+    const on = prefs.move !== false;
+    if (officeEl) officeEl.classList.toggle("paused", !on);
+    if (moveBtn){
+      moveBtn.classList.toggle("off", !on);
+      moveBtn.setAttribute("aria-pressed", String(on));
+    }
+    const st = $("#moveState"); if (st) st.textContent = on ? "ON" : "OFF";
+  }
+  if (moveBtn) moveBtn.addEventListener("click", () => {
+    prefs.move = (prefs.move === false);   // OFF 상태에서 누르면 다시 ON
+    save(LS.prefs, prefs);
+    applyMovePref();
+    toast(prefs.move ? "봇들이 다시 움직입니다" : "움직임을 멈췄습니다");
+  });
+
+  function clockText(){
+    const d = new Date();
+    let h = d.getHours();
+    const ap = h < 12 ? "오전" : "오후";
+    h = h % 12; if (h === 0) h = 12;
+    return ap + " " + h + ":" + pad2(d.getMinutes());
+  }
+  function tickClock(){ const c = $("#officeClock"); if (c) c.textContent = clockText(); }
+  setInterval(tickClock, 20000);
+
+  const botCountEl = $("#botOnCount");
+  if (botCountEl) botCountEl.textContent = String(Object.keys(BOTS).length);
+
+  function enterRoom(room){
+    setView("room");
+    const t = $$(".subtab").find(x => x.dataset.room === room);
+    if (t) t.click();
+  }
+  $$(".hotspot").forEach(h => {
+    const go = () => enterRoom(h.dataset.hot || "all");
+    h.addEventListener("click", go);
+    h.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); }
+    });
+  });
+
   /* ---------- 토스트 ---------- */
   let toastTimer;
   function toast(msg){
@@ -603,7 +649,8 @@
     const tt = $("#todayText"); if (tt) tt.textContent = todayText;
 
     renderRoom(); renderMemos(); renderTimeline(); renderStatus();
-    setView(currentView || "room");
+    tickClock(); applyMovePref();
+    setView(currentView || "map");
 
     await OfficeDB.init();
     renderStatus();

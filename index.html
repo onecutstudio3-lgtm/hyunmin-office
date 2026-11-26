@@ -181,6 +181,93 @@
   .chip-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px;}
   .chip{font-size:11px; font-weight:700; color:#7A6552; background:var(--cream); border:1px solid var(--line); border-radius:999px; padding:3px 9px;}
 
+  /* ---------- map: 본부 오피스 ---------- */
+  .welcome{
+    position:relative; display:flex; align-items:stretch; overflow:hidden; min-height:112px; margin-top:12px;
+    background:linear-gradient(135deg,#FFFAF3 0%,#FDF1E2 55%,#F8E7D4 100%);
+    border:1px solid #F3E3CE; border-radius:var(--r-card); box-shadow:var(--shadow);
+  }
+  .welcome .w-text{padding:14px 4px 14px 15px; flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center;}
+  .welcome .w-pill{
+    align-self:flex-start; display:inline-flex; align-items:center; gap:4px; margin-bottom:8px;
+    background:rgba(255,255,255,.88); border:1px solid #DCEAE6; color:#4E7C74;
+    font-size:10.5px; font-weight:800; border-radius:999px; padding:4px 9px; letter-spacing:-.02em;
+  }
+  .welcome h2{margin:0; font-size:15.5px; line-height:1.42; font-weight:800; color:#3B2C21; letter-spacing:-.035em;}
+  .welcome .w-art{width:46%; flex:none; position:relative;}
+  .welcome .w-art img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center;
+    -webkit-mask-image:linear-gradient(to right,rgba(0,0,0,0) 0,#000 30%);
+    mask-image:linear-gradient(to right,rgba(0,0,0,0) 0,#000 30%);
+  }
+  .welcome .w-art::after{content:""; position:absolute; inset:0; background:linear-gradient(to top right,rgba(253,241,226,.5),rgba(253,241,226,0) 58%);}
+
+  .sec-head{margin:20px 2px 9px;}
+  .sec-head h2{margin:0; font-size:20px; font-weight:800; letter-spacing:-.045em; color:#33251B;}
+  .sec-head p{margin:4px 0 0; font-size:11.5px; color:#A08A75; font-weight:600; letter-spacing:-.02em;}
+
+  .chips{display:flex; gap:7px; overflow-x:auto; padding:2px 2px 9px; margin:0 -2px; scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip-btn{
+    flex:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; height:32px; padding:0 11px;
+    border-radius:999px; font-size:11.5px; font-weight:800; color:#6B5645; letter-spacing:-.02em;
+    background:#fff; border:1px solid var(--line); box-shadow:0 1px 3px rgba(120,86,52,.05);
+    transition:background .18s,color .18s,transform .12s;
+  }
+  .chip-btn:active{transform:scale(.96);}
+  .chip-btn.toggle{background:var(--orange-soft); border-color:#F7DCC0; color:#C26114;}
+  .chip-btn.toggle.off{background:#fff; border-color:var(--line); color:#9C8A7A;}
+  .chip-btn .gdot{width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 0 2.5px var(--green-soft);}
+
+  .office{
+    position:relative; margin-top:2px; border-radius:20px; overflow:hidden; background:#EADBC8;
+    aspect-ratio:820/1065; border:1px solid #E7D6C1; box-shadow:0 12px 30px rgba(120,86,52,.16), 0 1px 2px rgba(120,86,52,.08);
+  }
+  .office .floor{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;}
+  .hotspot{position:absolute; border-radius:16px; cursor:pointer; transition:background .22s, box-shadow .22s; -webkit-tap-highlight-color:transparent;}
+  .hotspot:active{background:rgba(255,255,255,.34); box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);}
+  .room-label{
+    position:absolute; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; pointer-events:none;
+    background:rgba(255,255,255,.95); color:#4A382B; font-size:11px; font-weight:800; letter-spacing:-.03em;
+    padding:5px 10px; border-radius:999px; box-shadow:0 3px 10px rgba(80,55,35,.2);
+  }
+  .buddies{position:absolute; inset:0; pointer-events:none;}
+  .buddy{position:absolute; width:40px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;
+    animation:wander var(--dur,7s) ease-in-out infinite; animation-delay:var(--delay,0s);}
+  .buddy .bub{
+    width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:16px; margin-top:-30px;
+    background:radial-gradient(circle at 34% 28%,#FFFFFF,#F7EADA 62%,#E9D6BE);
+    border:2px solid #fff; box-shadow:0 4px 10px rgba(80,52,30,.26);
+    animation:bob 2.4s ease-in-out infinite; animation-delay:var(--delay,0s);
+  }
+  .buddy.nari .bub{background:radial-gradient(circle at 34% 28%,#FFF6EC,#FFDBB6 66%,#F5BC85);}
+  .buddy.dali .bub{background:radial-gradient(circle at 34% 28%,#F4FAFF,#CFE6FB 66%,#AFD2F2);}
+  .buddy.hark .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#E7E2F7 66%,#D2C9EE);}
+  .buddy.claude .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#F0E7DC 66%,#DED0BE);}
+  .buddy.key .bub{background:radial-gradient(circle at 34% 28%,#FFFFFF,#FFF3CF 66%,#F5E0A6);}
+  .buddy .tag{font-size:9px; font-weight:800; color:#fff; background:rgba(59,44,33,.6); padding:1px 6px; border-radius:999px; margin-top:3px; letter-spacing:-.02em;}
+  .office.paused .buddy, .office.paused .buddy .bub{animation-play-state:paused;}
+  @keyframes wander{
+    0%,100%{margin-left:0; margin-top:0;}
+    25%{margin-left:7px; margin-top:-5px;}
+    50%{margin-left:-4px; margin-top:6px;}
+    75%{margin-left:-7px; margin-top:-3px;}
+  }
+  @keyframes bob{
+    0%,100%{transform:translateY(0) scale(1);}
+    50%{transform:translateY(-7px) scale(1.05);}
+  }
+  .office-note{font-size:11px; color:#B29A83; font-weight:600; text-align:center; margin:9px 0 0; letter-spacing:-.02em;}
+  .now-row{display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #F6EDE1;}
+  .now-row:last-child{border-bottom:0; padding-bottom:0;}
+  .now-row .ico{width:34px; height:34px; border-radius:11px; display:grid; place-items:center; font-size:16px; flex:none; background:var(--cream);}
+  .now-row .ico.n{background:var(--orange-soft);} .now-row .ico.d{background:var(--blue-soft);}
+  .now-row .body{min-width:0; flex:1;}
+  .now-row .t{font-size:13px; font-weight:800; color:#3B2C21;}
+  .now-row .d{font-size:11px; color:var(--muted); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .now-row .go{margin-left:auto; font-size:11.5px; font-weight:800; color:var(--brown); background:#FBF1E4; border-radius:999px; padding:6px 11px; flex:none;}
+  .now-row .go:active{background:#F5E6D2;}
+
   /* ---------- dashboard ---------- */
   .stats{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
   .stat{background:var(--beige); border:1px solid #F1E4D2; border-radius:16px; padding:12px;}
@@ -381,6 +468,81 @@
 
   <!-- ================= 맵 ================= -->
   <section class="view" id="view-map">
+    <!-- 환영 배너 -->
+    <div class="welcome">
+      <div class="w-text">
+        <span class="w-pill">💠 현민님 전용 · 본부</span>
+        <h2>대장님, 오늘도<br>본부는 대기 중이에요</h2>
+      </div>
+      <div class="w-art"><img src="./assets/banner.jpg" alt="나리와 달이가 기다리는 본부"></div>
+    </div>
+
+    <!-- 본부 오피스 -->
+    <div class="sec-head">
+      <h2>본부 오피스</h2>
+      <p>공간을 눌러 들어가 보세요. 방마다 봇들이 일하고 있어요.</p>
+    </div>
+
+    <div class="chips">
+      <button class="chip-btn toggle" id="moveToggle" aria-pressed="true">✨ 움직임 <b id="moveState">ON</b></button>
+      <span class="chip-btn"><i class="gdot"></i><b>3</b>개 방 가동</span>
+      <span class="chip-btn">👥 <b id="botOnCount">5</b>명 ON</span>
+      <span class="chip-btn">🕒 <b id="officeClock">오후 1:00</b></span>
+    </div>
+
+    <div class="office" id="officeMap" aria-label="본부 오피스 평면도">
+      <img class="floor" src="./assets/office-map.jpg" alt="본부 오피스 평면도">
+
+      <!-- 대회의실 -->
+      <div class="hotspot" role="button" tabindex="0" data-hot="all" aria-label="대회의실 입장"
+           style="left:2%; top:1%; width:37%; height:56%">
+        <span class="room-label" style="left:6%; top:3%">🏛️ 대회의실</span>
+      </div>
+
+      <!-- 나리 지휘실 -->
+      <div class="hotspot" role="button" tabindex="0" data-hot="nari" aria-label="나리 지휘실 입장"
+           style="left:41%; top:2%; width:50%; height:56%">
+        <span class="room-label" style="left:14%; top:38%">🧡 나리 지휘실</span>
+      </div>
+
+      <!-- 달이·제이 라운지 -->
+      <div class="hotspot" role="button" tabindex="0" data-hot="dali" aria-label="달이·제이 라운지 입장"
+           style="left:45%; top:60%; width:54%; height:39%">
+        <span class="room-label" style="left:10%; top:6%">💙 달이·제이 라운지</span>
+      </div>
+
+      <!-- 움직이는 캐릭터 -->
+      <div class="buddies" id="buddies">
+        <div class="buddy nari"  style="left:26%; top:56%; --dur:7.4s; --delay:.1s"><div class="bub">🧡</div><div class="tag">나리</div></div>
+        <div class="buddy claude" style="left:60%; top:52%; --dur:8.6s; --delay:.9s"><div class="bub">🤖</div><div class="tag">클로드</div></div>
+        <div class="buddy hark"  style="left:13%; top:38%; --dur:6.8s; --delay:.5s"><div class="bub">🦅</div><div class="tag">호크</div></div>
+        <div class="buddy dali"  style="left:62%; top:78%; --dur:8.1s; --delay:1.3s"><div class="bub">💙</div><div class="tag">달이</div></div>
+        <div class="buddy key"   style="left:79%; top:86%; --dur:7.8s; --delay:.3s"><div class="bub">🔑</div><div class="tag">제이</div></div>
+      </div>
+    </div>
+    <p class="office-note">클릭 공간을 열면 지시·메모·회의가 이어집니다</p>
+
+    <!-- 지금 본부에서는 -->
+    <div class="card">
+      <div class="card-head"><h2>지금 본부에서는</h2><span class="hint">3개 방 · 5명</span></div>
+      <div class="now-row">
+        <div class="ico">🏛️</div>
+        <div class="body"><div class="t">대회의실</div><div class="d">원컷 · 클립 · 스레드 · 블로그 한 번에 지시</div></div>
+        <button class="go" data-open-room="all">입장 →</button>
+      </div>
+      <div class="now-row">
+        <div class="ico n">🧡</div>
+        <div class="body"><div class="t">나리 지휘실</div><div class="d">클립 27호 배달 · 스레드 3회 진행 중</div></div>
+        <button class="go" data-open-room="nari">입장 →</button>
+      </div>
+      <div class="now-row">
+        <div class="ico d">💙</div>
+        <div class="body"><div class="t">달이·제이 라운지</div><div class="d">블로그 · 당근 · 스마트스토어 주문 처리</div></div>
+        <button class="go" data-open-room="dali">입장 →</button>
+      </div>
+    </div>
+
+    <!-- 파이프라인 요약 (기존 정보 유지) -->
     <div class="card">
       <div class="card-head"><h2>🗺️ 우리 파이프라인</h2><span class="hint">2026.11.26 기준</span></div>
       <div class="map-wrap">
