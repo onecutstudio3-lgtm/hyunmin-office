@@ -6,6 +6,7 @@
 <title>박현민 AI 오피스</title>
 <meta name="description" content="현민님 전용 AI 오피스 — 나리·달이와 한 곳에서 지시하고 확인하는 모바일 앱">
 <meta name="theme-color" content="#FAF7F2">
+<meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="현민 오피스">
@@ -328,7 +329,7 @@
     <div class="avatar"><img src="./icon-192.png" alt="박현민 AI 오피스"></div>
     <div class="brand">
       <h1>박현민 AI 오피스</h1>
-      <div class="sub"><span class="dot"></span>현민님 전용 · 11월 26일 목요일</div>
+      <div class="sub"><span class="dot"></span>현민님 전용 · <span id="todayText">오늘</span></div>
     </div>
     <div class="server-pill" id="serverPill" role="button" tabindex="0" aria-label="AI 서버 설정">
       <span class="gear">⚙️</span>AI <span class="chip">서버</span>
@@ -389,7 +390,7 @@
             <div class="n-emoji">🎬</div>
             <div><div class="n-title">원컷스튜디오</div><div class="n-sub">숏폼 대행 · 크몽 7종 · 콜드메일 · 상담</div></div>
           </div>
-          <div class="chip-row"><span class="chip">크몽 7</span><span class="chip">스레드 2회</span><span class="chip">블로그 20:30</span><span class="chip">콜드메일 25통</span></div>
+          <div class="chip-row"><span class="chip">크몽 7</span><span class="chip">스레드 3회</span><span class="chip">블로그 20:30</span><span class="chip">콜드메일 25통</span></div>
           <div class="agent nari"><div class="face">🧡</div><div><div class="who">나리</div><div class="what">기획 · 컷 정리 · 납품 · 영업</div></div></div>
         </div>
         <div class="branch">
@@ -425,7 +426,7 @@
       <div class="card-head"><h2>📊 오늘의 운영 현황</h2><span class="hint">11.26 (목)</span></div>
       <div class="stats">
         <div class="stat"><div class="k">크몽 서비스</div><div class="v">7<small>종</small></div></div>
-        <div class="stat"><div class="k">스레드</div><div class="v">3<small>회 / 일</small></div></div>
+        <div class="stat"><div class="k">원컷 스레드</div><div class="v">3<small>회 / 일</small></div></div>
         <div class="stat"><div class="k">콜드메일</div><div class="v">25<small>통 / 평일</small></div></div>
         <div class="stat"><div class="k">네이버 클립</div><div class="v">19:30</div></div>
       </div>
@@ -435,7 +436,7 @@
       <div class="card-head"><h2>원컷스튜디오</h2><span class="hint">나리</span></div>
       <div class="rows">
         <div class="row"><div class="ico">🛒</div><div><div class="t">크몽 7종</div><div class="d">판매중 1 · 심사중 6 (5개 업종)</div></div><div class="r">확인 09·20시</div></div>
-        <div class="row"><div class="ico">🧵</div><div><div class="t">원컷 스레드 2회</div><div class="d">08:30 일상 · 21:30 일내용 (반말)</div></div><div class="r">배달</div></div>
+        <div class="row"><div class="ico">🧵</div><div><div class="t">원컷 스레드 3회</div><div class="d">08:30 · 12:00 · 21:30 (100% 반말)</div></div><div class="r">배달</div></div>
         <div class="row"><div class="ico">✉️</div><div><div class="t">콜드메일 25통</div><div class="d">평일 10:00 · 누계 178행</div></div><div class="r">평일</div></div>
         <div class="row"><div class="ico">📄</div><div><div class="t">상담 · 견적</div><div class="d">15만 / 45만 · 다건 38~40만</div></div><div class="r">대기</div></div>
       </div>
@@ -488,7 +489,7 @@
         <div style="font-size:11px; color:#A08A75; font-weight:600; margin-top:8px">유튜브 3채널은 일시정지로 빼두었습니다</div>
       </div>
       <div class="rows" style="margin-top:12px">
-        <div class="row"><div class="ico">✅</div><div><div class="t">클립 · 스레드 · 블로그</div><div class="d">19:30 / 08:30·21:00·21:30 / 20:30</div></div><div class="r">가동</div></div>
+        <div class="row"><div class="ico">✅</div><div><div class="t">클립 · 스레드 · 블로그</div><div class="d">19:30 / 08:30·12:00·21:00·21:30 / 20:30</div></div><div class="r">가동</div></div>
         <div class="row"><div class="ico">✅</div><div><div class="t">확인 · 감시</div><div class="d">크몽 09·20시 · 콜드메일 10시 · 메일 30분</div></div><div class="r">가동</div></div>
         <div class="row"><div class="ico">⏸️</div><div><div class="t">유튜브 응? · 엉?</div><div class="d">재개는 대장님 지시 대기</div></div><div class="r off">정지</div></div>
       </div>
@@ -646,7 +647,11 @@
     dali: { name:"달이", emoji:"💙", face:"💙", label:"블루",   color:"dali" }
   };
 
-  const todayKey = new Date().toISOString().slice(0,10);
+  function localDateKey(d){
+    d = d || new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  const todayKey = localDateKey();
 
   function seedMessages(){
     // 최초 실행 시 대회의실 기본 현황 (11.26)
@@ -688,19 +693,14 @@
   /* ---------- 회의실 ---------- */
   function renderRoom(){
     const chat = $('#chat');
-    const list = messages.filter(m => currentRoom === "all" ? true : (m.room === currentRoom || (m.room === "all" && m.from === currentRoom)));
-    // 대회의실: 전체 / 1:1: 그 봇과의 방 (대회의실에 그 봇이 한 말도 함께)
-    const shown = currentRoom === "all" ? messages.filter(m => m.room === "all") : list;
+    // 대회의실은 room==="all" 스레드, 1:1은 그 봇과의 스레드만
+    const shown = messages.filter(m => m.room === currentRoom);
     chat.innerHTML = "";
     if (!shown.length){
       chat.innerHTML = '<div class="empty">아직 대화가 없습니다<br>아래에 한 줄 지시를 남겨보세요</div>';
       return;
     }
-    let lastDate = null;
     shown.forEach(m => {
-      if (m.date && m.date !== lastDate && m.date !== todayKey){
-        lastDate = m.date;
-      }
       const me = m.from === "user";
       const bot = me ? null : BOTS[m.from];
       const el = document.createElement("div");
@@ -763,7 +763,7 @@
       from: "user",
       text: text,
       ts: nowTime(),
-      date: new Date().toISOString().slice(0,10),
+      date: localDateKey(),
       saved: 1
     };
     messages.push(msg);
@@ -779,7 +779,6 @@
     if (e.key === "Enter" && !e.isComposing){ e.preventDefault(); sendMessage(); }
   });
   $('#plusBtn').addEventListener("click", () => {
-    const chip = document.createElement("span");
     toast("첨부는 2차 버전에서 열립니다 · 지금은 텍스트로 지시해 주세요");
   });
 
@@ -788,7 +787,7 @@
     { t:"08:30", title:"원컷 스레드 (일상)", d:"반말 · 5대 규칙", who:"nari" },
     { t:"09:00", title:"크몽 문의 확인", d:"7종 상태 · 루키광고", who:"nari" },
     { t:"10:00", title:"콜드메일 25통", d:"평일만 · 누계 178행", who:"nari" },
-    { t:"12:00", title:"원컷 스레드 (점심)", d:"일상 톤", who:"nari" },
+    { t:"12:00", title:"원컷 스레드 (점심)", d:"일상 톤 · 짧게", who:"nari" },
     { t:"14:00", title:"크몽 순위 점검", d:"노출 · 키워드", who:"nari" },
     { t:"19:30", title:"네이버 클립 1편", d:"제작 → 배달", who:"nari" },
     { t:"20:00", title:"크몽 저녁 확인", d:"문의 · 답변", who:"nari" },
@@ -947,6 +946,9 @@
 
   /* ---------- 부팅 ---------- */
   (async function boot(){
+    const d0 = new Date();
+    const todayText = (d0.getMonth()+1) + "월 " + d0.getDate() + "일 " + "일월화수목금토"[d0.getDay()] + "요일";
+    const tt = $('#todayText'); if (tt) tt.textContent = todayText;
     await OfficeDB.init();
     renderRoom(); renderMemos(); renderTimeline();
     // 저장된 뷰 복원 (기본: 회의실)
