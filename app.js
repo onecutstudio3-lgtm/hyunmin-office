@@ -34,6 +34,43 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
+  /* =========================================================
+     사진 첨부 · 인용 답장 — 본문 규약
+       사진   : ![첨부사진](data:image/jpeg;base64,…)   (또는 https:// 이미지 주소)
+       답장   : [[reply:발신자|원문요약]]\n실제 답장
+     DB 스키마는 그대로 두고 text 안에서만 약속한다.
+     ========================================================= */
+  const PHOTO_RE = /!\[([^\]\n]{0,80})\]\((data:image\/(?:jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s)]+)\)/g;
+  const PHOTO_DATA_RE = /!\[[^\]\n]{0,80}\]\(data:image\/(?:jpeg|jpg|png|webp|gif);base64,[^)]*\)/g;
+  const REPLY_RE = /^\[\[reply:([^\]\n|]{1,40})\|([^\]\n]{0,80})\]\]\n?/;
+  const MAX_PHOTOS = 3;
+  const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
+
+  function stripPhotos(t){ return String(t == null ? "" : t).replace(PHOTO_DATA_RE, "📷 사진"); }
+  function splitReply(t){
+    const s = String(t == null ? "" : t);
+    const m = s.match(REPLY_RE);
+    if (!m) return { who:"", summary:"", rest:s };
+    return { who:m[1], summary:m[2], rest:s.slice(m[0].length) };
+  }
+  function oneLine(t){ return String(t == null ? "" : t).replace(/\s+/g, " ").trim(); }
+  function summaryOf(t){ return oneLine(stripPhotos(t)).slice(0, 50); }
+  function copyable(t){
+    const p = splitReply(t);
+    const head = p.who ? ("↩️ " + p.who + (p.summary ? ": " + p.summary : "") + "\n") : "";
+    return (head + String(p.rest || "").replace(PHOTO_DATA_RE, "[사진]")).trim();
+  }
+  function photoParts(photos){
+    const out = [];
+    (photos || []).forEach(u => {
+      const m = String(u || "").match(/^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i);
+      if (!m) return;
+      const mt = m[1].toLowerCase() === "image/jpg" ? "image/jpeg" : m[1].toLowerCase();
+      out.push({ inlineData: { mimeType: mt, data: m[2] } });
+    });
+    return out;
+  }
+
   /* ---------- 봇 (4명 체제: 나리 · 달이 · 제이 · 주노) ---------- */
   const BOTS = {
     nari:    { name:"나리", emoji:"🧡", face:"🧡", label:"오렌지", color:"nari",   what:"원컷스튜디오 · 클립 · 스레드 · 크몽" },
@@ -202,7 +239,12 @@
   const seenMemo = new Set();
 
   function cacheAll(){
-    save(LS.msgs, messages.slice(-300));
+    // 사진 base64는 기기 저장공간(localStorage)을 금방 넘치게 하므로, 캐시본에서는 자리만 남긴다.
+    // 원본은 공용 DB에서 다시 받아오고, 화면에 그려지는 messages 배열은 그대로 둔다.
+    save(LS.msgs, messages.slice(-300).map(m => {
+      if (!m || !m.text || String(m.text).indexOf("data:image/") === -1) return m;
+      return Object.assign({}, m, { text: String(m.text).replace(PHOTO_DATA_RE, "📷 사진(오프라인 생략)") });
+    }));
     save(LS.memos, memos.slice(0,100));
   }
 
@@ -431,10 +473,11 @@
       const el = document.createElement("div");
       el.className = "msg " + (me ? "me" : kind);
       el.dataset.id = m.id || "";
-      const cp = '<button class="copy" type="button" data-copy="' + esc(m.id) + '" aria-label="본문 복사">복사</button>';
+      const cp = '<button class="copy" type="button" data-copy="' + esc(m.id) + '" aria-label="본문 복사">복사</button>' +
+        '<button class="rbtn" type="button" data-reply="' + esc(m.id) + '" aria-label="이 글에 답장">↩️ 답장</button>';
       if (me){
         el.innerHTML = '<div class="body"><div class="bubble"></div><div class="foot"><span>' + esc(hhmm(m.created_at)) + '</span>' + cp + '</div></div>';
-        el.querySelector(".bubble").textContent = m.text;
+        renderBubble(el.querySelector(".bubble"), m.text);
       } else {
         el.innerHTML =
           '<div class="face">' + bot.face + '</div>' +
@@ -442,7 +485,7 @@
             '<span class="badge ' + bot.color + '">' + bot.label + '</span>' +
             '<time>' + esc(hhmm(m.created_at)) + '</time>' + cp + '</div>' +
           '<div class="bubble"></div></div>';
-        el.querySelector(".bubble").textContent = m.text;
+        renderBubble(el.querySelector(".bubble"), m.text);
       }
       chat.appendChild(el);
     });
@@ -452,6 +495,37 @@
   function scrollChat(){
     const c = $("#chat"); if (!c) return;
     requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
+  }
+
+  /* 말풍선 본문: 인용 박스 + 텍스트 + 사진(안전한 DOM 생성만 한다) */
+  function renderBubble(box, raw){
+    if (!box) return;
+    box.innerHTML = "";
+    const p = splitReply(raw);
+    if (p.who){
+      const q = document.createElement("div");
+      q.className = "quote";
+      q.textContent = "↩️ " + p.who + (p.summary ? ": " + p.summary : "에게 답장");
+      box.appendChild(q);
+    }
+    const rest = String(p.rest || "");
+    let last = 0, mm;
+    PHOTO_RE.lastIndex = 0;
+    while ((mm = PHOTO_RE.exec(rest)) !== null){
+      if (mm.index > last) box.appendChild(document.createTextNode(rest.slice(last, mm.index)));
+      const img = document.createElement("img");
+      img.className = "photo";
+      const src = mm[2];                 // 루프 변수(mm)는 끝나면 null이 되므로 값으로 붙잡아 둔다
+      img.src = src;
+      img.alt = mm[1] || "첨부사진";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.addEventListener("click", () => openLightbox(src));
+      box.appendChild(img);
+      last = mm.index + mm[0].length;
+    }
+    if (last < rest.length) box.appendChild(document.createTextNode(rest.slice(last)));
+    if (!box.childNodes.length) box.appendChild(document.createTextNode(rest));
   }
 
   /* ---------- 방 탭: 대회의실 + 1:1 (ROOMS 기준으로 생성) ---------- */
@@ -506,24 +580,175 @@
     if (t && t.dataset.room) selectRoom(t.dataset.room);
   });
 
+  /* ---------- 사진 첨부 · 인용 답장 상태 ---------- */
+  let pendingPhotos = [];   // [{ dataUrl, bytes, name }]
+  let replyTarget = null;   // { id, who, summary }
+
+  function dataUrlBytes(u){
+    const s = String(u || "");
+    const i = s.indexOf(",");
+    if (i < 0) return 0;
+    return Math.round((s.length - i - 1) * 3 / 4);
+  }
+  function kbText(n){ return n >= 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + "MB" : Math.max(1, Math.round(n / 1024)) + "KB"; }
+
+  function updateAttachStrip(){
+    const strip = $("#attachStrip");
+    if (!strip) return;
+    strip.innerHTML = "";
+    strip.hidden = !pendingPhotos.length;
+    pendingPhotos.forEach((p, idx) => {
+      const chip = document.createElement("div");
+      chip.className = "attach-chip";
+      const im = document.createElement("img");
+      im.src = p.dataUrl; im.alt = p.name || "첨부 사진";
+      const sz = document.createElement("span");
+      sz.className = "sz"; sz.textContent = kbText(p.bytes);
+      const x = document.createElement("button");
+      x.type = "button"; x.className = "x"; x.textContent = "✕";
+      x.setAttribute("aria-label", "이 사진 빼기");
+      x.addEventListener("click", () => { pendingPhotos.splice(idx, 1); updateAttachStrip(); });
+      chip.appendChild(im); chip.appendChild(sz); chip.appendChild(x);
+      strip.appendChild(chip);
+    });
+  }
+
+  function updateReplyBar(){
+    const bar = $("#replyBar"), txt = $("#replyBarText");
+    if (!bar || !txt) return;
+    bar.hidden = !replyTarget;
+    if (replyTarget){
+      txt.textContent = "↩️ " + replyTarget.who + "에게 답장" + (replyTarget.summary ? ': "' + replyTarget.summary + '"' : "");
+    }
+  }
+  const replyCancelBtn = $("#replyCancel");
+  if (replyCancelBtn) replyCancelBtn.addEventListener("click", () => {
+    replyTarget = null; updateReplyBar();
+    const input = $("#msgInput"); if (input) input.focus();
+  });
+
+  /* 사진 크게 보기 */
+  function openLightbox(src){
+    const lb = $("#lightbox"), im = $("#lightboxImg");
+    if (!lb || !im) return;
+    im.src = src; lb.hidden = false;
+  }
+  function closeLightbox(){
+    const lb = $("#lightbox"), im = $("#lightboxImg");
+    if (!lb || !im) return;
+    lb.hidden = true; im.removeAttribute("src");
+  }
+  const lbEl = $("#lightbox");
+  if (lbEl) lbEl.addEventListener("click", e => { if (e.target === lbEl) closeLightbox(); });
+  const lbX = $("#lightboxClose");
+  if (lbX) lbX.addEventListener("click", closeLightbox);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
+
+  /* ---------- 사진 고르기 → Canvas 리사이즈·압축(긴 변 900px · JPEG 0.72 · 150KB 안팎) ---------- */
+  function readAsDataURL(file){
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result || ""));
+      fr.onerror = () => reject(new Error("파일을 읽지 못했습니다"));
+      fr.readAsDataURL(file);
+    });
+  }
+  function loadImage(src){
+    return new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error("사진을 열지 못했습니다"));
+      im.src = src;
+    });
+  }
+  async function compressPhoto(file){
+    const src = await readAsDataURL(file);
+    const im = await loadImage(src);
+    let w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+    if (!w || !h) throw new Error("사진 크기를 읽지 못했습니다");
+    const pick = Math.min(1, 900 / Math.max(w, h));
+    let tw = Math.max(1, Math.round(w * pick)), th = Math.max(1, Math.round(h * pick));
+    let q = 0.72, out = "";
+    for (let step = 0; step < 4; step++){
+      const cv = document.createElement("canvas");
+      cv.width = tw; cv.height = th;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, tw, th);
+      ctx.drawImage(im, 0, 0, tw, th);
+      out = cv.toDataURL("image/jpeg", q);
+      if (dataUrlBytes(out) <= 150 * 1024) break;
+      if (q > 0.5){ q = Math.round((q - 0.1) * 100) / 100; }
+      else { tw = Math.max(1, Math.round(tw * 0.8)); th = Math.max(1, Math.round(th * 0.8)); q = 0.7; }
+    }
+    return { dataUrl: out, bytes: dataUrlBytes(out), name: file.name || "사진" };
+  }
+
+  const photoInput = $("#photoInput");
+  const plusBtn = $("#plusBtn");
+  if (plusBtn && photoInput) plusBtn.addEventListener("click", () => photoInput.click());
+  if (photoInput) photoInput.addEventListener("change", async e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    for (const f of files){
+      if (pendingPhotos.length >= MAX_PHOTOS){ toast("사진은 한 번에 " + MAX_PHOTOS + "장까지 붙일 수 있습니다"); break; }
+      if (!/^image\//i.test(String(f.type || ""))){ toast("사진 파일만 붙일 수 있습니다"); continue; }
+      if (f.size > MAX_PHOTO_BYTES){ toast("12MB가 넘는 사진은 붙이지 못합니다 · 더 작은 사진으로"); continue; }
+      try{
+        toast("사진을 줄이는 중…");
+        pendingPhotos.push(await compressPhoto(f));
+        updateAttachStrip();
+      }catch(err){ toast((err && err.message) || "사진을 붙이지 못했습니다"); }
+    }
+  });
+
+  /* 말풍선 [↩️ 답장] */
+  document.addEventListener("click", e => {
+    const btn = e.target && e.target.closest ? e.target.closest("[data-reply]") : null;
+    if (!btn) return;
+    const m = messages.find(x => String(x.id) === String(btn.dataset.reply));
+    if (!m){ toast("답장할 글을 찾지 못했습니다"); return; }
+    const kind = msgKind(m);
+    const who = kind === "user" ? "대장님" : botMeta(kind).name;
+    replyTarget = { id:m.id, who:who, summary: summaryOf(splitReply(m.text).rest) };
+    updateReplyBar();
+    const input = $("#msgInput"); if (input) input.focus();
+  });
+
   async function sendMessage(){
     const input = $("#msgInput");
-    const text = input.value.trim();
-    if (!text){ input.focus(); return; }
+    const typed = input.value.trim();
+    const photos = pendingPhotos.slice();
+    const reply = replyTarget;
+    if (!typed && !photos.length){ input.focus(); return; }
+
+    let body = typed;
+    if (photos.length){
+      body = (typed ? typed + "\n\n" : "") + photos.map(p => "![첨부사진](" + p.dataUrl + ")").join("\n");
+    }
+    if (reply){
+      const who = String(reply.who || "").replace(/[|\]\n]/g, " ").slice(0, 20).trim();
+      const sum = String(reply.summary || "").replace(/[|\]\n]/g, " ").slice(0, 50).trim();
+      body = "[[reply:" + who + "|" + sum + "]]\n" + body;
+    }
+
     const row = {
       room: currentRoom === "all" ? "all" : currentRoom,
       sender: "user",
       role: "user",
-      text: text
+      text: body
     };
     input.value = "";
     aiNotice = null;                       // 지난 오류 안내는 새 지시와 함께 지운다
+    pendingPhotos = []; updateAttachStrip();
+    replyTarget = null; updateReplyBar();
+    const photoUrls = photos.map(p => p.dataUrl);
     try{
       const saved = await OfficeDB.insertMessage(row);
       if (saved && saved.id) upsertMessage(saved);
       else { renderRoom(); }
       toast("보냈습니다 · 공용 DB에 저장됨");
-      queueInstant(row.room, text);        // ⚡ 즉시 채팅이 켜져 있으면 바로 답변 생성
+      queueInstant(row.room, body, photoUrls);   // ⚡ 즉시 채팅이 켜져 있으면 바로 답변 생성(사진도 함께 넘김)
     }catch(e){
       const localId = "local-" + Date.now();
       queuePush(row, localId);
@@ -535,9 +760,6 @@
   $("#sendBtn").addEventListener("click", sendMessage);
   $("#msgInput").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.isComposing){ e.preventDefault(); sendMessage(); }
-  });
-  $("#plusBtn").addEventListener("click", () => {
-    toast("첨부는 다음 버전에서 열립니다 · 지금은 텍스트로 지시해 주세요");
   });
 
   /* =========================================================
@@ -750,47 +972,59 @@
     return "즉시 답변을 만들지 못했습니다 · " + (m || "알 수 없는 오류");
   }
 
-  /* 최근 대화 10건을 프롬프트용 한 덩어리로 */
+  /* 최근 대화 10건을 프롬프트용 한 덩어리로 (사진 base64는 빼고 자리만 남긴다) */
   function transcript(room, limit){
     return messages
       .filter(m => (m.room || "all") === room)
       .slice(-(limit || 10))
       .map(m => {
         const who = (m.sender === "user") ? "대장님" : botMeta(m.sender).name;
-        return who + ": " + String(m.text || "").replace(/\s+/g, " ").trim();
+        const p = splitReply(m.text);
+        const body = stripPhotos(p.rest).replace(/\s+/g, " ").trim();
+        return who + ": " + (p.who ? "(" + p.who + "에게 답장) " : "") + body;
       })
       .join("\n");
   }
 
-  async function askOne(room, text){
+  /* 이번 지시 문장: 인용 답장 맥락을 앞에 세우고 사진은 [사진 첨부]로 줄인다 */
+  function promptText(raw){
+    const p = splitReply(raw);
+    const head = p.who
+      ? "[인용 답장] " + p.who + "의 글 \"" + p.summary + "\"에 대장님이 답장하는 중이다. 이 맥락을 이어서 답해라.\n"
+      : "";
+    return head + stripPhotos(p.rest).trim();
+  }
+
+  async function askOne(room, text, photos){
     const bot = BOTS[room];
     if (!bot) throw aiErr("NO_ROOM", "1:1 방이 아닙니다");
     const system = PERSONA[room] + "\n\n" + OFFICE_BRIEF +
       "\n\n지금은 '" + bot.name + "' 1:1 방이다. 아래 대화록을 읽고 대장님의 마지막 지시에 너(" + bot.name + ")로서 답한다." +
-      " 바로 쓸 수 있는 순서·문장으로 2~5줄. 첫머리에 네 이름을 다시 붙이지 않는다. 실행이 필요하면 '내가 지금 할 수 있는 것'과 '대장님이 해줄 것'을 구분해 적는다.";
+      " 바로 쓸 수 있는 순서·문장으로 2~5줄. 첫머리에 네 이름을 다시 붙이지 않는다. 실행이 필요하면 '내가 지금 할 수 있는 것'과 '대장님이 해줄 것'을 구분해 적는다." +
+      " 사진이 함께 오면 사진에 실제로 보이는 것(글자·사물·화면·분위기)을 먼저 짚고 답한다.";
     const prompt = "[대화록 · " + bot.name + " 방 · 최근]\n" + transcript(room, 10) +
-      "\n\n[이번 지시]\n" + text + "\n\n위 지시에 답해라.";
+      "\n\n[이번 지시]\n" + promptText(text) + "\n\n위 지시에 답해라.";
     return await callGemini({
       systemInstruction: { parts:[{ text: system }] },
-      contents: [{ role:"user", parts:[{ text: prompt }] }],
+      contents: [{ role:"user", parts: [{ text: prompt }].concat(photoParts(photos)) }],
       generationConfig: { temperature:0.85, maxOutputTokens: 1200 }
     });
   }
 
-  async function askAll(text){
+  async function askAll(text, photos){
     const prompt = "[대회의실 대화록 · 최근 6건]\n" + transcript("all", 6) +
-      "\n\n[대장님 지시]\n" + text +
+      "\n\n[대장님 지시]\n" + promptText(text) +
       '\n\n위 지시에 대해 4명이 각 1~2줄씩 아주 짧고 핵심만 답해 {"messages":[{"sender":"nari|dali|keyring|juno","text":"..."}]} JSON으로 돌려줘라.';
     try{
       const raw = await callGemini({
         systemInstruction: { parts:[{ text: ALL_BRIEF }] },
-        contents: [{ role:"user", parts:[{ text: prompt }] }],
+        contents: [{ role:"user", parts: [{ text: prompt }].concat(photoParts(photos)) }],
         generationConfig: { temperature:0.8, maxOutputTokens: 2400, responseMimeType:"application/json" }
       });
       return parsePlan(raw);
     }catch(e){
       if (e && (e.fatal || e.status === 401 || e.status === 403 || e.status === 429)) throw e;
-      const single = await askOne("nari", text);
+      const single = await askOne("nari", text, photos);
       return [{ sender:"nari", text: single }];
     }
   }
@@ -850,10 +1084,10 @@
   let aiBusy = false;
   const aiQueue = [];
 
-  function queueInstant(room, text){
+  function queueInstant(room, text, photos){
     if (!aiReady()) return false;                 // 꺼져 있으면 기존 5분 서버 흐름 그대로
     if (!BOTS[room] && room !== "all") return false;
-    aiQueue.push({ room: room, text: text });
+    aiQueue.push({ room: room, text: text, photos: photos || [] });
     drainAiQueue();
     return true;
   }
@@ -864,22 +1098,22 @@
     try{
       while (aiQueue.length){
         const job = aiQueue.shift();
-        await runInstant(job.room, job.text);
+        await runInstant(job.room, job.text, job.photos);
       }
     } finally {
       aiBusy = false;
     }
   }
 
-  async function runInstant(room, text){
+  async function runInstant(room, text, photos){
     const isAll = room === "all";
     const who = isAll ? "4명" : (BOTS[room] ? BOTS[room].name : "AI");
     aiNotice = null;
     setAiPending(room, isAll ? "🤖 4명이 실시간 논의 중…" : "🤖 " + who + "가 답을 쓰는 중…");
     try{
       let rows = null;
-      if (isAll) rows = await askAll(text);
-      else rows = [{ sender: room, text: await askOne(room, text) }];
+      if (isAll) rows = await askAll(text, photos);
+      else rows = [{ sender: room, text: await askOne(room, text, photos) }];
 
       if (isAll) setAiPending(room, "🤖 4명이 답을 올리는 중…");
       else setAiPending(room, null);
@@ -1166,7 +1400,7 @@
     if (!btn) return;
     const m = messages.find(x => String(x.id) === String(btn.dataset.copy));
     if (!m){ toast("복사할 글을 찾지 못했습니다"); return; }
-    const ok = await copyText(m.text);
+    const ok = await copyText(copyable(m.text));
     if (!ok){ toast("복사하지 못했습니다 · 길게 눌러 선택해 주세요"); return; }
     const label = btn.dataset.label || btn.textContent;
     btn.dataset.label = label;

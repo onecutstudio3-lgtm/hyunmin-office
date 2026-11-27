@@ -202,6 +202,35 @@
   }
   .send:active{background:var(--brown-d); transform:scale(.97);}
 
+  /* ---------- 사진 첨부 · 인용 답장 ---------- */
+  .attach-strip{display:flex; gap:8px; flex-wrap:wrap; margin:10px 2px -2px;}
+  .attach-strip[hidden]{display:none;}
+  .attach-chip{position:relative; width:64px; height:64px; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#fff; box-shadow:0 2px 8px rgba(120,86,52,.07);}
+  .attach-chip img{width:100%; height:100%; object-fit:cover; display:block;}
+  .attach-chip .x{position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:rgba(59,44,33,.72); color:#fff; font-size:10px; font-weight:800; display:grid; place-items:center;}
+  .attach-chip .sz{position:absolute; bottom:0; left:0; right:0; font-size:8.5px; font-weight:700; text-align:center; color:#fff; background:rgba(59,44,33,.45); padding:1px 0;}
+  .reply-bar{display:flex; align-items:center; gap:8px; margin:10px 0 -4px; padding:8px 10px; border-radius:12px; background:#FBF4EA; border:1px solid var(--line); border-left:3px solid var(--brown-l);}
+  .reply-bar[hidden]{display:none;}
+  .reply-bar .rp-ic{flex:none; font-size:12px;}
+  .reply-bar .rp-txt{flex:1; min-width:0; font-size:11.5px; color:#6B5645; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .reply-bar .rp-x{flex:none; font-size:11px; color:#A08A75; font-weight:800; padding:0 2px;}
+  .bubble .quote{border-left:3px solid #C9AE92; padding:1px 0 1px 8px; margin:0 0 7px; font-size:11.5px; line-height:1.45; color:#8B7360; font-weight:600; overflow-wrap:anywhere;}
+  .msg.me .bubble .quote{border-left-color:rgba(255,255,255,.55); color:rgba(255,255,255,.82);}
+  .bubble img.photo{display:block; max-width:100%; width:auto; max-height:min(46vh,320px); border-radius:12px; margin:2px 0 6px; border:1px solid rgba(0,0,0,.05); cursor:zoom-in;}
+  .msg.me .bubble img.photo{border-color:rgba(255,255,255,.28);}
+  .rbtn{
+    margin-left:6px; flex:none; font-size:10px; font-weight:800; letter-spacing:-.02em; line-height:1.4;
+    color:#8B7360; background:#fff; border:1px solid var(--line); border-radius:999px; padding:2px 8px;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .rbtn:active{background:#FBF1E4;}
+
+  /* ---------- 사진 크게 보기 ---------- */
+  .lightbox{position:fixed; inset:0; z-index:90; background:rgba(28,20,14,.93); display:flex; align-items:center; justify-content:center; padding:18px;}
+  .lightbox[hidden]{display:none;}
+  .lightbox img{max-width:100%; max-height:100%; border-radius:12px; object-fit:contain;}
+  .lightbox .lb-x{position:absolute; top:calc(14px + env(safe-area-inset-top)); right:16px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:15px; font-weight:800; display:grid; place-items:center;}
+
   /* ---------- map ---------- */
   .map-wrap{position:relative; padding:4px 2px 4px;}
   .node{
@@ -547,11 +576,18 @@
         <span class="steps">대장님이 지시하면 ① 1차: 각자 맡은 영역 관점 1개씩만 짧게 제시(중복 금지) · ② 2차: 서로 빠진 조건·리스크 교차 보완 · ③ 최종: 1명이 합의된 최적 결론 1안만 <b>[최종 결론]</b>으로 보고</span>
       </div>
       <div class="chat" id="chat"></div>
+      <div class="attach-strip" id="attachStrip" hidden></div>
+      <div class="reply-bar" id="replyBar" hidden>
+        <span class="rp-ic">↩️</span>
+        <span class="rp-txt" id="replyBarText"></span>
+        <button class="rp-x" id="replyCancel" type="button" aria-label="답장 취소">✕</button>
+      </div>
       <div class="composer">
-        <button class="plus" id="plusBtn" aria-label="첨부">+</button>
+        <button class="plus" id="plusBtn" aria-label="사진 첨부" title="사진 첨부">📷</button>
         <input id="msgInput" type="text" enterkeyhint="send" placeholder="대장님, 지시를 한 줄로 (@all = 전원)" aria-label="메시지 입력">
         <button class="send" id="sendBtn">보내기</button>
       </div>
+      <input type="file" id="photoInput" accept="image/*" multiple hidden>
     </div>
     <!-- 진행 현황: public.memos 기반 · [완료] 접두어로 완료 구분 -->
     <div class="card prog" id="progCard">
@@ -898,8 +934,13 @@
   </div>
 </div>
 
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="사진 크게 보기" hidden>
+  <button class="lb-x" id="lightboxClose" type="button" aria-label="닫기">✕</button>
+  <img id="lightboxImg" alt="첨부 사진">
+</div>
+
 <div class="toast" id="toast"></div>
 
-<script src="./app.js?v=12"></script>
+<script src="./app.js?v=13"></script>
 </body>
 </html>
