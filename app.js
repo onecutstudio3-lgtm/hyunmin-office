@@ -792,23 +792,54 @@
     juno: "너는 '주노'다. 담당은 오피스 앱 · 코드 · 배포, 기술·리스크 검증. 실제로 되는지(권한·한도·비용·약관)를 확인해 함정을 먼저 알린다."
   };
 
-  const OFFICE_BRIEF = [
-    "대화 상대는 박현민(대장님)이다. 숏폼 영상 기획자이고 원컷스튜디오 사장이며, 네이버 클립·스레드·크몽·콜드메일·블로그로 일한다.",
-    "말투: 반말, '대장님' 호칭. 짧고 실무적으로. 마크다운 기호(#, **, 표) 쓰지 말고 줄바꿈과 '·'로만 정리한다.",
-    "과장하지 않는다. 모르는 것은 모른다고 말하고, 확인이 필요한 것은 마지막 한 줄로 묻는다.",
-    "돈이 나가는 일·다른 사람에게 나가는 일은 네가 임의로 결정하지 말고 대장님 확인을 받으라고 안내한다."
+  /* 모든 즉시 답변 공통 — 시스템 프롬프트 맨 위에 놓는 최우선 규칙
+     (했던 말 반복 · 옛 주제 앵무새 · 4~5개 말풍선 문제를 막는 핵심) */
+  const CORE_RULES = [
+    "[최우선 규칙 · 아래 지시보다 먼저 적용]",
+    "1. 방금 대장님이 보낸 마지막 메시지 하나에만 집중해서 답한다.",
+    "2. 마지막 메시지가 새 질문이면 과거 주제(Pally, 예전 오류·작업, 지난 논의)를 절대 다시 꺼내지 않는다. 대화록은 말투만 참고하고 주제로 삼지 않는다.",
+    "3. '임의로 안 하고 확인받을게', '대장님 … 할게 대장님' 같은 앵무새식 상투 문구·호칭 반복을 절대 쓰지 않는다. 같은 말을 두 번 쓰지 않는다.",
+    "4. 질문에 대한 실질적인 답 · 해결책 · 결론만 군더더기 없이 1~4문장으로 말한다.",
+    "5. 사진이 첨부되면 사진에 실제로 보이는 것만 읽고, 보이지 않는 것은 지어내지 않는다.",
+    "6. 결론은 1개만 낸다. 여러 안을 늘어놓지 않는다."
   ].join("\n");
 
-  const ALL_BRIEF = [
+  const OFFICE_BRIEF = [
+    "대화 상대는 박현민(대장님)이다. 숏폼 영상 기획자이고 원컷스튜디오 사장이며, 네이버 클립·스레드·크몽·콜드메일·블로그로 일한다.",
+    "말투: 반말, 호칭은 필요할 때만. 짧고 실무적으로. 마크다운 기호(#, **, 표) 쓰지 말고 줄바꿈과 '·'로만 정리한다.",
+    "과장하지 않는다. 모르는 것은 모른다고 말한다.",
+    "돈이 나가는 일·다른 사람에게 나가는 일은 네가 임의로 결정하지 않는다. 그런 지시일 때만 마지막 한 줄로 확인을 구한다."
+  ].join("\n");
+
+  const DUTIES = [
+    "나리(nari): B2B 영업 · 원컷스튜디오(릴스·쇼츠 수주) · 콘텐츠 제작 · 메일·콜드메일 · 크몽 · 네이버 클립 · 스레드 · 상담·견적·계약 · 건기식(나우코스)",
+    "달이(dali): 블로그 · 체험단 · 그립 · 고단가 리서치 · 당근 비즈프로필 · 스마트스토어 · 네이버 상위노출·키워드",
+    "제이(keyring): 지시 기록 · 보고 정리 · 앱테크 · 최저가 비교 · 마진 계산",
+    "주노(juno): 오피스 앱 · 코드 · 배포 · 기술·리스크 검증"
+  ].join("\n");
+
+  /* 대회의실 기본값: 담당자 1명이 결론 1개 */
+  const ONE_BRIEF = [
+    CORE_RULES,
+    "",
     OFFICE_BRIEF,
     "",
-    "지금은 '대회의실'이다. 나리·달이·제이·주노 네 명이 한 번에 협의한다.",
-    "나리: B2B·원컷스튜디오·콘텐츠·메일 / 달이: 블로그·체험단·당근·고단가 리서치 / 제이: 지시 기록·보고 정리·앱테크·최저가 / 주노: 오피스·코드·배포·기술 리스크 검증.",
-    "답변은 아래 3단계를 모두 담아 messages 배열로 만든다.",
-    "1) 1차: 지시와 관련된 2~4명이 각자 영역 관점에서 1~2줄. 같은 말 반복 금지.",
-    "2) 2차: 서로 빠진 조건·리스크·비용을 1~2명이 1줄씩 교차 보완.",
-    "3) 최종: 가장 관련 깊은 1명이 '[최종 결론]'으로 시작하는 1안 요약 2~4줄(바로 실행할 순서 포함).",
-    "각 text는 200자 이내, 반말. 모두 4~6개 메시지로 끝낸다. 인사말·이름 반복은 넣지 않는다."
+    "[대회의실] 답은 담당자 1명이 결론 1개만 낸다.",
+    DUTIES,
+    "지시에 가장 맞는 담당자 1명을 골라 그 사람으로서 답한다. 인사말·이름 붙이기·여러 안 나열 금지.",
+    '출력은 {"sender":"nari|dali|juno|keyring","text":"1~4문장"} JSON 객체 하나만. 코드블록·설명 금지.'
+  ].join("\n");
+
+  /* 대회의실 예외: '다들 의견 내봐·토론해·각자 말해봐'라고 명시했을 때만 최대 4명 */
+  const TEAM_BRIEF = [
+    CORE_RULES,
+    "",
+    OFFICE_BRIEF,
+    "",
+    "[대회의실 · 여러 명 요청] 대장님이 여러 명의 의견을 명시적으로 요청했다.",
+    DUTIES,
+    "지시와 관련된 사람만 최대 4명, 각자 자기 영역 관점에서 1~2줄. 같은 말 반복·인사말·이름 붙이기 금지.",
+    '출력은 {"messages":[{"sender":"nari|dali|juno|keyring","text":"..."}]} JSON 하나만. 4개를 넘기지 않는다.'
   ].join("\n");
 
   function setAiPending(room, t){ aiPending = t ? { room:room, text:t } : null; renderRoom(); }
@@ -972,18 +1003,18 @@
     return "즉시 답변을 만들지 못했습니다 · " + (m || "알 수 없는 오류");
   }
 
-  /* 최근 대화 10건을 프롬프트용 한 덩어리로 (사진 base64는 빼고 자리만 남긴다) */
+  /* 최근 대화 몇 건만 간결히 (사진 base64는 빼고 자리만 남긴다)
+     길게 넣으면 옛 주제를 다시 꺼내므로 기본 6건 · 메시지당 140자로 자른다 */
   function transcript(room, limit){
-    return messages
+    const rows = messages
       .filter(m => (m.room || "all") === room)
-      .slice(-(limit || 10))
-      .map(m => {
-        const who = (m.sender === "user") ? "대장님" : botMeta(m.sender).name;
-        const p = splitReply(m.text);
-        const body = stripPhotos(p.rest).replace(/\s+/g, " ").trim();
-        return who + ": " + (p.who ? "(" + p.who + "에게 답장) " : "") + body;
-      })
-      .join("\n");
+      .slice(-(limit || 6));
+    return rows.map(m => {
+      const who = (m.sender === "user") ? "대장님" : botMeta(m.sender).name;
+      const p = splitReply(m.text);
+      const body = stripPhotos(p.rest).replace(/\s+/g, " ").trim().slice(0, 140);
+      return who + ": " + (p.who ? "(" + p.who + "에게 답장) " : "") + body;
+    }).join("\n") || "(없음)";
   }
 
   /* 이번 지시 문장: 인용 답장 맥락을 앞에 세우고 사진은 [사진 첨부]로 줄인다 */
@@ -998,12 +1029,12 @@
   async function askOne(room, text, photos){
     const bot = BOTS[room];
     if (!bot) throw aiErr("NO_ROOM", "1:1 방이 아닙니다");
-    const system = PERSONA[room] + "\n\n" + OFFICE_BRIEF +
-      "\n\n지금은 '" + bot.name + "' 1:1 방이다. 아래 대화록을 읽고 대장님의 마지막 지시에 너(" + bot.name + ")로서 답한다." +
-      " 바로 쓸 수 있는 순서·문장으로 2~5줄. 첫머리에 네 이름을 다시 붙이지 않는다. 실행이 필요하면 '내가 지금 할 수 있는 것'과 '대장님이 해줄 것'을 구분해 적는다." +
-      " 사진이 함께 오면 사진에 실제로 보이는 것(글자·사물·화면·분위기)을 먼저 짚고 답한다.";
-    const prompt = "[대화록 · " + bot.name + " 방 · 최근]\n" + transcript(room, 10) +
-      "\n\n[이번 지시]\n" + promptText(text) + "\n\n위 지시에 답해라.";
+    const system = CORE_RULES + "\n\n" + PERSONA[room] + "\n\n" + OFFICE_BRIEF +
+      "\n\n지금은 '" + bot.name + "' 1:1 방이다. 대화록은 말투 참고용이다. 대장님의 마지막 지시 하나에 너(" + bot.name + ")로서 답한다." +
+      " 바로 쓸 수 있는 순서·문장으로 1~4문장. 첫머리에 네 이름을 다시 붙이지 않는다. 실행이 필요하면 '내가 지금 할 수 있는 것'과 '대장님이 해줄 것'을 구분해 적는다." +
+      " 사진이 함께 오면 사진에 실제로 보이는 것만 짚고 답한다.";
+    const prompt = "[대화록 · " + bot.name + " 방 · 최근 6건 — 말투 참고용. 주제는 무시]\n" + transcript(room, 6) +
+      "\n\n[대장님 마지막 지시]\n" + promptText(text) + "\n\n위 마지막 지시 하나에만 답해라.";
     return await callGemini({
       systemInstruction: { parts:[{ text: system }] },
       contents: [{ role:"user", parts: [{ text: prompt }].concat(photoParts(photos)) }],
@@ -1011,15 +1042,64 @@
     });
   }
 
+  /* 대회의실: 기본은 담당자 1명 · 결론 1개.
+     '다들 의견 내봐 · 토론해 · 각자 말해봐'처럼 명시했을 때만 최대 4명. */
+  const MULTI_RE = /(다들|모두|전원)\s*(의견|말|한번|각자|얘기)|의견\s*(내|내봐|좀|다)|토론|각자\s*(말|의견|정리|발언)/;
+  const NAME_RULES = [["nari", /나리/], ["dali", /달이/], ["keyring", /제이|키링/], ["juno", /주노/]];
+
+  /* 마지막 메시지 본문(인용 답장 머리말·사진은 뺀다) */
+  function lastBody(raw){ return stripPhotos(splitReply(raw).rest).trim(); }
+
+  /* 대장님이 특정 봇을 지목했으면 그 봇 (두 명 이상 섞이면 null → 모델이 고른다) */
+  function pickNamedBot(raw){
+    const body = lastBody(raw);
+    const hits = NAME_RULES.filter(r => r[1].test(body)).map(r => r[0]);
+    return hits.length === 1 ? hits[0] : null;
+  }
+
   async function askAll(text, photos){
-    const prompt = "[대회의실 대화록 · 최근 6건]\n" + transcript("all", 6) +
-      "\n\n[대장님 지시]\n" + promptText(text) +
-      '\n\n위 지시에 대해 4명이 각 1~2줄씩 아주 짧고 핵심만 답해 {"messages":[{"sender":"nari|dali|keyring|juno","text":"..."}]} JSON으로 돌려줘라.';
+    const named = pickNamedBot(text);
+    if (!named && MULTI_RE.test(lastBody(text))) return await askTeam(text, photos);
+    return [await askConclusion(text, photos, named)];
+  }
+
+  /* 기본 경로: 가장 적합한 담당자 1명이 결론 1개(JSON 객체 하나) */
+  async function askConclusion(text, photos, named){
+    const who = named
+      ? BOTS[named].name + "(" + named + ")가 맡는다. sender는 \"" + named + "\"."
+      : "지시에 가장 맞는 담당자 1명이 맡는다. 그 담당자를 sender에 넣는다.";
+    const prompt = "[대화록 · 대회의실 · 최근 6건 — 말투 참고용. 주제는 무시]\n" + transcript("all", 6) +
+      "\n\n[대장님 마지막 지시]\n" + promptText(text) +
+      "\n\n---\n위 마지막 지시 하나에만 답한다. " + who +
+      " 결론 1개만 1~4문장. 인사말·이름·상투적 되묻기 없이 바로 답한다." +
+      '\n출력은 {"sender":"nari|dali|juno|keyring","text":"..."} JSON 객체 하나만. 코드블록·설명 금지.';
     try{
       const raw = await callGemini({
-        systemInstruction: { parts:[{ text: ALL_BRIEF }] },
+        systemInstruction: { parts:[{ text: ONE_BRIEF }] },
         contents: [{ role:"user", parts: [{ text: prompt }].concat(photoParts(photos)) }],
-        generationConfig: { temperature:0.8, maxOutputTokens: 2400, responseMimeType:"application/json" }
+        generationConfig: { temperature:0.7, maxOutputTokens: 600, responseMimeType:"application/json" }
+      });
+      const row = parseOne(raw, named || "nari");
+      if (named) row.sender = named;      // 대장님이 지목한 봇으로 고정
+      return row;
+    }catch(e){
+      if (e && (e.fatal || e.status === 401 || e.status === 403 || e.status === 429)) throw e;
+      const plain = await askOne(named || "nari", text, photos);
+      return { sender: named || "nari", text: plain };
+    }
+  }
+
+  /* 예외 경로: 여러 명 의견(최대 4개) */
+  async function askTeam(text, photos){
+    const prompt = "[대화록 · 대회의실 · 최근 6건 — 말투 참고용. 주제는 무시]\n" + transcript("all", 6) +
+      "\n\n[대장님 마지막 지시]\n" + promptText(text) +
+      "\n\n---\n대장님이 여러 명 의견을 요청했다. 관련된 사람 최대 4명이 각 1~2줄." +
+      '\n출력은 {"messages":[{"sender":"nari|dali|juno|keyring","text":"..."}]} JSON 하나만. 4개를 넘기지 않는다.';
+    try{
+      const raw = await callGemini({
+        systemInstruction: { parts:[{ text: TEAM_BRIEF }] },
+        contents: [{ role:"user", parts: [{ text: prompt }].concat(photoParts(photos)) }],
+        generationConfig: { temperature:0.75, maxOutputTokens: 900, responseMimeType:"application/json" }
       });
       return parsePlan(raw);
     }catch(e){
@@ -1029,33 +1109,65 @@
     }
   }
 
-  function parsePlan(raw){
-    let txt = String(raw || "").trim();
-    txt = txt.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-    let data = null;
-    try{ data = JSON.parse(txt); }
-    catch(e){
-      const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
-      if (a >= 0 && b > a){ try{ data = JSON.parse(txt.slice(a, b + 1)); }catch(e2){} }
+  function parseLoose(raw){
+    const txt = String(raw || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    try{ return JSON.parse(txt); }catch(e){}
+    const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
+    if (a >= 0 && b > a){ try{ return JSON.parse(txt.slice(a, b + 1)); }catch(e2){} }
+    return null;
+  }
+
+  function normSender(v){
+    const raw = String(v || "").trim().toLowerCase();
+    if (BOTS[raw]) return raw;
+    if (/나리/.test(raw)) return "nari";
+    if (/달이/.test(raw)) return "dali";
+    if (/제이|키링/.test(raw)) return "keyring";
+    if (/주노/.test(raw)) return "juno";
+    return null;
+  }
+
+  /* JSON이 아니면 본문 글로 본다 */
+  function plainText(raw){
+    const txt = String(raw || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    const c = txt.charAt(0);
+    return (c === "{" || c === "[") ? "" : txt;
+  }
+
+  /* 1명 결론 파싱 — 어떤 형태로 와도 말풍선 1개로 접는다 */
+  function parseOne(raw, fallbackSender){
+    const data = parseLoose(raw);
+    let first = null;
+    if (Array.isArray(data)) first = data[0];
+    else if (data && typeof data === "object"){
+      if (Array.isArray(data.messages)) first = data.messages[0] || null;
+      else if (data.sender || data.text || data.answer) first = data;
     }
+    let sender = null, body = "";
+    if (first && typeof first === "object"){
+      sender = normSender(first.sender || first.from || first.name || first.speaker);
+      body = String(first.text || first.answer || first.content || "").trim();
+    } else if (typeof first === "string"){
+      body = first.trim();
+    }
+    if (!body) body = plainText(raw);
+    if (!body) throw aiErr("FORMAT", "결론 형식을 읽지 못했습니다");
+    return { sender: sender || fallbackSender || "nari", text: body };
+  }
+
+  function parsePlan(raw){
+    const data = parseLoose(raw);
     const list = (data && Array.isArray(data.messages)) ? data.messages : (Array.isArray(data) ? data : []);
     const out = [];
     list.forEach(it => {
       if (!it) return;
-      const rawSender = String(it.sender || "").trim().toLowerCase();
-      const body = String(it.text || "").trim();
+      const body = String((typeof it === "string") ? it : (it.text || it.answer || "")).trim();
       if (!body) return;
-      let sender = BOTS[rawSender] ? rawSender : null;
-      if (!sender){
-        if (/나리/.test(rawSender)) sender = "nari";
-        else if (/달이/.test(rawSender)) sender = "dali";
-        else if (/제이|키링/.test(rawSender)) sender = "keyring";
-        else if (/주노/.test(rawSender)) sender = "juno";
-      }
+      const sender = (typeof it === "string") ? null : normSender(it.sender || it.from || it.name);
       out.push({ sender: sender || "nari", text: body });
     });
-    if (!out.length) throw aiErr("FORMAT", "협의 형식을 읽지 못했습니다");
-    return out.slice(0, 8);
+    if (!out.length) throw aiErr("FORMAT", "의견 형식을 읽지 못했습니다");
+    return out.slice(0, 4);
   }
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1108,19 +1220,23 @@
   async function runInstant(room, text, photos){
     const isAll = room === "all";
     const who = isAll ? "4명" : (BOTS[room] ? BOTS[room].name : "AI");
+    const named = isAll ? pickNamedBot(text) : null;
+    const multi = !!isAll && !named && MULTI_RE.test(lastBody(text));
     aiNotice = null;
-    setAiPending(room, isAll ? "🤖 4명이 실시간 논의 중…" : "🤖 " + who + "가 답을 쓰는 중…");
+    setAiPending(room, isAll
+      ? (multi ? "🤖 다들 의견 정리 중…" : "🤖 결론 정리 중…")
+      : "🤖 " + who + "가 답을 쓰는 중…");
     try{
       let rows = null;
       if (isAll) rows = await askAll(text, photos);
       else rows = [{ sender: room, text: await askOne(room, text, photos) }];
 
-      if (isAll) setAiPending(room, "🤖 4명이 답을 올리는 중…");
+      if (isAll) setAiPending(room, multi ? "🤖 의견 올리는 중…" : "🤖 결론 올리는 중…");
       else setAiPending(room, null);
 
       const n = await insertBotRows(room, rows);
       setAiPending(room, null);
-      if (n) toast(isAll ? ("대회의실 답변 " + n + "개 도착 · " + nowTime()) : (who + " 즉시 답변 · " + nowTime()));
+      if (n) toast(isAll ? (multi ? ("대회의실 의견 " + n + "개 도착 · " + nowTime()) : ("대회의실 결론 도착 · " + nowTime())) : (who + " 즉시 답변 · " + nowTime()));
     }catch(e){
       try{ console.warn("[instant-ai]", e); }catch(err){}
       setAiPending(room, null);
