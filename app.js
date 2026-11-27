@@ -144,10 +144,11 @@
     },
 
     async selectMessages(limit){
-      const q = "?select=*&order=created_at.asc&limit=" + (limit || 300);
+      const q = "?select=*&order=created_at.desc&limit=" + (limit || 300);
       const r = await fetch(this.base() + "/messages" + q, { headers:this.headers(), cache:"no-store" });
       if (!r.ok) throw new Error("HTTP " + r.status);
-      return await r.json();
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.reverse() : rows;
     },
     async selectMemos(){
       const r = await fetch(this.base() + "/memos?select=*&order=created_at.desc&limit=100", { headers:this.headers(), cache:"no-store" });
